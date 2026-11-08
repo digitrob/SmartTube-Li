@@ -15,13 +15,15 @@ import com.digitrob.smarttube.li.LiPrefs;
 import com.liskovsoft.smartyoutubetv2.tv.R;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * YouTube-style navigation rail: icon + label, 240 dp expanded, 72 dp collapsed.
  * Shared by browse and search so the sidebar stays put outside playback.
+ *
+ * <p>Rows are stored by index, not by section id: upstream may insert a pinned copy of a
+ * built-in section, so ids are not guaranteed to be unique and the presenter addresses
+ * sections by index.</p>
  */
 public class NavRailController {
     public interface Listener {
@@ -37,17 +39,18 @@ public class NavRailController {
     private final TextView mLogo;
     private final ImageButton mToggle;
     private final Listener mListener;
-    private final List<Integer> mOrder = new ArrayList<>();
-    private final Map<Integer, Row> mRows = new LinkedHashMap<>();
+    private final List<Row> mRows = new ArrayList<>();
 
     private boolean mCollapsed;
 
     private static final class Row {
+        final int sectionId;
         final LinearLayout container;
         final TextView label;
         final ImageView icon;
 
-        Row(LinearLayout container, TextView label, ImageView icon) {
+        Row(int sectionId, LinearLayout container, TextView label, ImageView icon) {
+            this.sectionId = sectionId;
             this.container = container;
             this.label = label;
             this.icon = icon;
@@ -80,7 +83,7 @@ public class NavRailController {
     }
 
     public void addItem(int index, int sectionId, CharSequence title) {
-        if (mItems == null || mRows.containsKey(sectionId)) {
+        if (mItems == null) {
             return;
         }
 
@@ -90,7 +93,6 @@ public class NavRailController {
         row.setMinimumHeight(dp(48));
         row.setBackgroundResource(R.drawable.li_rail_item_bg);
         row.setClickable(true);
-        row.setTag(sectionId);
 
         ImageView icon = new ImageView(mContext);
         LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(24), dp(24));
@@ -123,46 +125,51 @@ public class NavRailController {
         int insertAt = Math.min(Math.max(index, 0), mItems.getChildCount());
         mItems.addView(row, insertAt, params);
 
-        mRows.put(sectionId, new Row(row, label, icon));
-        mOrder.add(insertAt, sectionId);
-
-        applyRowStyle(mRows.get(sectionId));
+        Row railRow = new Row(sectionId, row, label, icon);
+        mRows.add(insertAt, railRow);
+        applyRowStyle(railRow);
     }
 
     public void removeItem(int sectionId) {
-        Row row = mRows.remove(sectionId);
-        mOrder.remove(Integer.valueOf(sectionId));
-        if (row != null && mItems != null) {
-            mItems.removeView(row.container);
+        for (int i = 0; i < mRows.size(); i++) {
+            Row row = mRows.get(i);
+            if (row.sectionId == sectionId) {
+                mRows.remove(i);
+                if (mItems != null) {
+                    mItems.removeView(row.container);
+                }
+                return;
+            }
         }
     }
 
     public void clear() {
         mRows.clear();
-        mOrder.clear();
         if (mItems != null) {
             mItems.removeAllViews();
         }
     }
 
     public int size() {
-        return mOrder.size();
+        return mRows.size();
     }
 
     public int idAt(int index) {
-        return index >= 0 && index < mOrder.size() ? mOrder.get(index) : -1;
+        return index >= 0 && index < mRows.size() ? mRows.get(index).sectionId : -1;
     }
 
     public int indexOf(int sectionId) {
-        return mOrder.indexOf(sectionId);
+        for (int i = 0; i < mRows.size(); i++) {
+            if (mRows.get(i).sectionId == sectionId) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public void selectIndex(int index) {
-        for (int i = 0; i < mOrder.size(); i++) {
-            Row row = mRows.get(mOrder.get(i));
-            if (row != null) {
-                row.container.setSelected(i == index);
-            }
+        for (int i = 0; i < mRows.size(); i++) {
+            mRows.get(i).container.setSelected(i == index);
         }
     }
 
@@ -197,7 +204,7 @@ public class NavRailController {
             mToggle.setOnClickListener(toggle);
         }
 
-        for (Row row : mRows.values()) {
+        for (Row row : mRows) {
             applyRowStyle(row);
         }
     }
