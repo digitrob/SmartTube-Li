@@ -1,6 +1,7 @@
 package com.digitrob.smarttube.li;
 
 import com.liskovsoft.smartyoutubetv2.common.prefs.GeneralData;
+import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerTweaksData;
 import com.liskovsoft.smartyoutubetv2.tv.ui.main.MainApplication;
 
 /**
@@ -40,6 +41,14 @@ public class LiApplication extends MainApplication {
 
         if (data.getScreensaverTimeoutMs() != GeneralData.SCREENSAVER_TIMEOUT_NEVER) {
             data.setScreensaverTimeoutMs(GeneralData.SCREENSAVER_TIMEOUT_NEVER);
+        }
+
+        // H.264 is the safest hardware-decoded codec on the Snapdragon 8155; upstream
+        // otherwise prefers VP9 when the preset matches several 1080p tracks.
+        PlayerTweaksData tweaks = PlayerTweaksData.instance(this);
+
+        if (!tweaks.isAvcOverVp9Preferred()) {
+            tweaks.setAvcOverVp9Preferred(true);
         }
     }
 }

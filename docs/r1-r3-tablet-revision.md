@@ -55,6 +55,10 @@ tablet, without touching upstream logic outside `src/stli`.
 2. **Single tap did nothing in the player.** The overlay had both a `GestureDetector`
    single-tap handler and an `OnClickListener`, so one tap toggled the controls twice. The
    overlay now consumes the touch stream and the gesture detector is the only toggle path.
+3. **The 1080p AVC default never applied.** `PlayerData.getFormat()` never returns `null`; it
+   falls back to the device default (4K VP9 on capable devices). The one-time default is now
+   gated on `LiPrefs.player_format_initialized`, and `avcOverVp9Preferred` is enabled for the
+   car build, so the first video selects 1080p AVC and later user choices are kept.
 
 ## Verified on emulator (2880×1620, density 360)
 
@@ -67,6 +71,7 @@ tablet, without touching upstream logic outside `src/stli`.
 | Bottom sheet (player gear) | ✅ |
 | Watch: auto-hide, mini progress, title, next/gear | ✅ |
 | Search results as list rows, row opens playback | ✅ |
+| First-run quality = 1080p AVC (gear sheet checkmark) | ✅ |
 | No black overlay after 10–22 s idle | ✅ |
 | No `FATAL EXCEPTION` / no ANR in final cold start | ✅ |
 

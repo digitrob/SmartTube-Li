@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.digitrob.smarttube.li.LiMetrics;
 import com.digitrob.smarttube.li.LiNowPlaying;
 import com.digitrob.smarttube.li.ui.playback.SimplePlayerListener;
+import com.digitrob.smarttube.li.LiPrefs;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
 import com.digitrob.smarttube.li.ui.TouchBrowseActivity;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -233,9 +234,11 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
 
         mItemService = YouTubeServiceManager.instance().getMediaItemService();
 
-        if (PlayerData.instance(this).getFormat(FormatItem.TYPE_VIDEO) == null) {
-            // Safe default for the headunit: 1080p H.264. Users can change it via Quality.
+        if (!LiPrefs.instance(this).isPlayerFormatInitialized()) {
+            // Safe default for the headunit: 1080p H.264. Users can change it via the gear
+            // sheet; the flag makes sure we never overwrite that choice on later launches.
             PlayerData.instance(this).setFormat(FormatItem.VIDEO_FHD_AVC_30);
+            LiPrefs.instance(this).setPlayerFormatInitialized(true);
         }
 
         setupUpNext();

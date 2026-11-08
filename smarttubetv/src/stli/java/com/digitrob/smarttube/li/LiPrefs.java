@@ -22,6 +22,7 @@ public final class LiPrefs {
     private static final String FILE = "li_prefs";
     private static final String KEY_TOUCH_UI = "touch_ui";
     private static final String KEY_RAIL_COLLAPSED = "rail_collapsed";
+    private static final String KEY_PLAYER_FORMAT_INITIALIZED = "player_format_initialized";
 
     private static LiPrefs sInstance;
 
@@ -66,5 +67,18 @@ public final class LiPrefs {
 
     public void setRailCollapsed(boolean collapsed) {
         mPrefs.edit().putBoolean(KEY_RAIL_COLLAPSED, collapsed).apply();
+    }
+
+    /**
+     * Upstream's {@code PlayerData.getFormat()} never returns null (it falls back to the device
+     * default, which is 4K VP9 on capable devices). This flag marks that we have applied the
+     * car default (1080p AVC) once, so later user choices are never overwritten.
+     */
+    public boolean isPlayerFormatInitialized() {
+        return mPrefs.getBoolean(KEY_PLAYER_FORMAT_INITIALIZED, false);
+    }
+
+    public void setPlayerFormatInitialized(boolean initialized) {
+        mPrefs.edit().putBoolean(KEY_PLAYER_FORMAT_INITIALIZED, initialized).apply();
     }
 }
