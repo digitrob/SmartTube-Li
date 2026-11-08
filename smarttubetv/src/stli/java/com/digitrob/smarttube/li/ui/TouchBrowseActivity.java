@@ -14,6 +14,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -24,6 +25,8 @@ import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
 import com.digitrob.smarttube.li.ui.browse.SettingsAdapter;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
 import com.digitrob.smarttube.li.ui.shorts.ShortsIntent;
+import com.digitrob.smarttube.li.ui.shell.LiSections;
+import com.digitrob.smarttube.li.ui.shell.NavRailController;
 import com.digitrob.smarttube.li.ui.watch.TouchWatchActivity;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsItem;
@@ -43,7 +46,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     private static final int MIN_COLUMNS = 3;
     private static final int MIN_CARD_WIDTH_DP = 300;
 
-    private LinearLayout mRailItems;
+    private NavRailController mRail;
     private TextView mHint;
     private RecyclerView mRecycler;
     private SwipeRefreshLayout mRefresh;
@@ -70,8 +73,12 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         mDensity = getResources().getDisplayMetrics().density;
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_touch_browse);
+        // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
+        // further scheduling, otherwise the black overlay still appears after 10 s.
+        getScreensaverManager().disable();
+        getScreensaverManager().setBlocked(true);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        mRailItems = findViewById(R.id.li_rail_items);
         mHint = findViewById(R.id.li_content_hint);
         mRecycler = findViewById(R.id.li_content);
         mRefresh = findViewById(R.id.li_refresh);
@@ -82,9 +89,30 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
                 com.liskovsoft.smartyoutubetv2.common.app.presenters.SearchPresenter
                         .instance(this).startSearch(null));
 
+        mRail = new NavRailController(this, sectionId -> {
+            if (mPresenter != null) {
+                mPresenter.selectSection(sectionId);
+            }
+        });
+
         mPresenter = BrowsePresenter.instance(this);
         mPresenter.setView(this);
         mPresenter.onViewInitialized();
+
+        int pendingSection = getIntent().getIntExtra(LiSections.EXTRA_SECTION_ID, -1);
+        if (pendingSection != -1) {
+            mPresenter.selectSection(pendingSection);
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        int sectionId = intent.getIntExtra(LiSections.EXTRA_SECTION_ID, -1);
+        if (sectionId != -1 && mPresenter != null) {
+            mPresenter.selectSection(sectionId);
+        }
     }
 
     private void setupFeed() {
@@ -266,42 +294,18 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     @Override
     public void addSection(int index, BrowseSection section) {
-        if (mRailItems == null || section == null) {
+        if (mRail == null || section == null) {
             return;
         }
-
-        TextView item = new TextView(this);
-        item.setText(section.getTitle());
-        item.setSingleLine(true);
-        item.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        item.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14 * mDensity);
-        item.setTextColor(Color.WHITE);
-        item.setGravity(Gravity.CENTER_VERTICAL);
-        item.setPadding(dp(16), dp(12), dp(12), dp(12));
-        item.setBackgroundResource(R.drawable.li_rail_item_bg);
-        item.setTag(section.getId());
-        item.setOnClickListener(v -> mPresenter.selectSection(section.getId()));
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        mRailItems.addView(item, Math.min(index, mRailItems.getChildCount()), lp);
+        mRail.addItem(index, section.getId(), section.getTitle());
     }
 
     @Override
     public void removeSection(BrowseSection section) {
-        if (mRailItems == null || section == null) {
+        if (mRail == null || section == null) {
             return;
         }
-
-        for (int i = 0; i < mRailItems.getChildCount(); i++) {
-            View child = mRailItems.getChildAt(i);
-            Object tag = child.getTag();
-            if (tag instanceof Integer && (int) tag == section.getId()) {
-                mRailItems.removeViewAt(i);
-                break;
-            }
-        }
+        mRail.removeItem(section.getId());
 
         if (section.getId() == mCurrentSectionId) {
             mCurrentSectionId = -1;
@@ -312,8 +316,8 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     @Override
     public void removeAllSections() {
-        if (mRailItems != null) {
-            mRailItems.removeAllViews();
+        if (mRail != null) {
+            mRail.clear();
         }
         mCurrentSectionId = -1;
         if (mAdapter != null) {
@@ -324,32 +328,27 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     @Override
     public void selectSection(int index, boolean focusOnContent) {
-        if (mRailItems == null) {
+        if (mRail == null) {
             return;
         }
 
-        for (int i = 0; i < mRailItems.getChildCount(); i++) {
-            mRailItems.getChildAt(i).setSelected(i == index);
-        }
+        mRail.selectIndex(index);
 
-        if (index < 0 || index >= mRailItems.getChildCount()) {
+        int sectionId = mRail.idAt(index);
+        if (sectionId == -1) {
             return;
         }
 
-        Object tag = mRailItems.getChildAt(index).getTag();
-        if (tag instanceof Integer) {
-            int sectionId = (int) tag;
-            if (sectionId != mCurrentSectionId) {
-                mCurrentSectionId = sectionId;
-                mLastScrollEndKey = null;
-                showFeed();
-                mAdapter.clear();
-                showHint("Loading…");
-            }
-            // The TV UI relies on the headers' selection listener for this; touch has to ask.
-            if (mPresenter != null) {
-                mPresenter.onSectionFocused(sectionId);
-            }
+        if (sectionId != mCurrentSectionId) {
+            mCurrentSectionId = sectionId;
+            mLastScrollEndKey = null;
+            showFeed();
+            mAdapter.clear();
+            showHint("Loading…");
+        }
+        // The TV UI relies on the headers' selection listener for this; touch has to ask.
+        if (mPresenter != null) {
+            mPresenter.onSectionFocused(sectionId);
         }
     }
 
@@ -396,6 +395,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             mSettingsAdapter.setItems(group.getItems());
             if (!mSettingsShown) {
                 mSettingsShown = true;
+                mRecycler.setLayoutManager(new LinearLayoutManager(this));
                 mRecycler.setAdapter(mSettingsAdapter);
             }
             if (mHint != null) {
@@ -466,6 +466,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     private void showFeed() {
         if (mSettingsShown && mRecycler != null) {
             mSettingsShown = false;
+            mRecycler.setLayoutManager(mLayoutManager);
             mRecycler.setAdapter(mAdapter);
         }
     }

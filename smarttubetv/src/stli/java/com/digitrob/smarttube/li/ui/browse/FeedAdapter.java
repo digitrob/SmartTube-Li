@@ -5,6 +5,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -85,7 +86,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public FeedAdapter(Context context, Listener listener) {
         mContext = context;
         mListener = listener;
-        mCornerRadiusPx = Math.round(10 * context.getResources().getDisplayMetrics().density);
+        mCornerRadiusPx = Math.round(12 * context.getResources().getDisplayMetrics().density);
         mPlaceholder = new ColorDrawable(ContextCompat.getColor(context, R.color.li_surface_high));
     }
 
@@ -226,6 +227,10 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         holder.title.setText(video.getTitle());
         holder.meta.setText(video.getSecondTitle());
 
+        String author = video.getAuthor();
+        holder.avatar.setText(author != null && !author.isEmpty()
+                ? author.substring(0, 1).toUpperCase() : "•");
+
         String badge = null;
         if (video.hasNewContent) {
             badge = mContext.getString(R.string.badge_new_content);
@@ -258,6 +263,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             mListener.onVideoLongClicked(video);
             return true;
         });
+        holder.more.setOnClickListener(v -> mListener.onVideoLongClicked(video));
     }
 
     private void bindShelf(ShelfHolder holder, ShelfRow row) {
@@ -379,6 +385,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final TextView title;
         final TextView meta;
         final TextView badge;
+        final TextView avatar;
+        final ImageButton more;
         final ProgressBar progress;
 
         VideoHolder(View itemView) {
@@ -387,6 +395,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             title = itemView.findViewById(R.id.li_card_title);
             meta = itemView.findViewById(R.id.li_card_meta);
             badge = itemView.findViewById(R.id.li_card_badge);
+            avatar = itemView.findViewById(R.id.li_card_avatar);
+            more = itemView.findViewById(R.id.li_card_more);
             progress = itemView.findViewById(R.id.li_card_progress);
         }
     }

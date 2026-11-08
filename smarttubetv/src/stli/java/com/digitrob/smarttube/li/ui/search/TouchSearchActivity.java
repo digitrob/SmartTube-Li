@@ -19,6 +19,8 @@ import com.digitrob.smarttube.li.LiMetrics;
 import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
 import com.digitrob.smarttube.li.ui.shorts.ShortsIntent;
+import com.digitrob.smarttube.li.ui.shell.LiSections;
+import com.digitrob.smarttube.li.ui.shell.NavRailController;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
@@ -44,6 +46,7 @@ public class TouchSearchActivity extends MotherActivity implements SearchView {
     private FeedAdapter mAdapter;
     private SearchPresenter mPresenter;
     private float mDensity = 2.25f;
+    private NavRailController mRail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,11 +55,19 @@ public class TouchSearchActivity extends MotherActivity implements SearchView {
         mDensity = getResources().getDisplayMetrics().density;
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_search);
+        // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
+        // further scheduling, otherwise the black overlay still appears after 10 s.
+        getScreensaverManager().disable();
+        getScreensaverManager().setBlocked(true);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mInput = findViewById(R.id.li_search_input);
         mHint = findViewById(R.id.li_search_hint);
         mRecycler = findViewById(R.id.li_search_results);
         mRefresh = findViewById(R.id.li_search_refresh);
+
+        mRail = new NavRailController(this, sectionId -> LiSections.open(this, sectionId));
+        mRail.setItems(LiSections.defaults());
 
         setupResults();
         setupInput();

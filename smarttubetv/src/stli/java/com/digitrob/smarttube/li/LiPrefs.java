@@ -21,6 +21,7 @@ public final class LiPrefs {
 
     private static final String FILE = "li_prefs";
     private static final String KEY_TOUCH_UI = "touch_ui";
+    private static final String KEY_RAIL_COLLAPSED = "rail_collapsed";
 
     private static LiPrefs sInstance;
 
@@ -57,5 +58,13 @@ public final class LiPrefs {
 
     public void setTouchUiEnabled(boolean enabled) {
         mPrefs.edit().putBoolean(KEY_TOUCH_UI, enabled).apply();
+    }
+
+    public boolean isRailCollapsed() {
+        return mPrefs.getBoolean(KEY_RAIL_COLLAPSED, false);
+    }
+
+    public void setRailCollapsed(boolean collapsed) {
+        mPrefs.edit().putBoolean(KEY_RAIL_COLLAPSED, collapsed).apply();
     }
 }

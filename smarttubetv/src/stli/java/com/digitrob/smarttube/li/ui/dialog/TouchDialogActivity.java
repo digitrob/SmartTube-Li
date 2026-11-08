@@ -87,6 +87,12 @@ public class TouchDialogActivity extends MotherActivity implements AppDialogView
         setTheme(R.style.LiDialogTheme);
         setContentView(R.layout.li_dialog);
 
+        // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
+        // further scheduling, otherwise the black overlay still appears after 10 s.
+        getScreensaverManager().disable();
+        getScreensaverManager().setBlocked(true);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         mContent = findViewById(R.id.li_dialog_content);
         mTitle = findViewById(R.id.li_dialog_title);
         mClose = findViewById(R.id.li_dialog_close);
@@ -131,7 +137,7 @@ public class TouchDialogActivity extends MotherActivity implements AppDialogView
     @Override
     public void finish() {
         notifyFinish();
-        super.finish();
+        finishReally();
     }
 
     @Override

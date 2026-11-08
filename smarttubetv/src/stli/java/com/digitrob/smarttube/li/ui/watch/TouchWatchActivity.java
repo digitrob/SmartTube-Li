@@ -68,7 +68,7 @@ import io.reactivex.schedulers.Schedulers;
  * simply hides the side panel and the metadata block.</p>
  */
 public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.Host {
-    private static final long CONTROLS_TIMEOUT_MS = 0; // 0 = keep controls visible (car UX)
+    private static final long CONTROLS_TIMEOUT_MS = 3_000;
     private static final long SEEK_STEP_MS = 10_000;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -82,11 +82,15 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
     private View mMetaPane;
     private ImageButton mBackButton;
     private ImageButton mPlayButton;
+    private ImageButton mNextButton;
+    private ImageButton mGearButton;
     private ProgressBar mBuffering;
+    private ProgressBar mMiniProgress;
+    private TextView mPlayerTitle;
     private SeekBar mSeekBar;
     private TextView mPosition;
     private TextView mDuration;
-    private TextView mFullscreenButton;
+    private ImageButton mFullscreenButton;
     private TextView mTitle;
     private TextView mAuthor;
     private TextView mStats;
@@ -135,6 +139,8 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         public void onPause() {
             updatePlayButton();
             LiNowPlaying.instance().update(false);
+            showControls();
+            mHandler.removeCallbacks(mHideControls);
         }
 
         @Override
@@ -186,6 +192,9 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
             long position = mController.getPositionMs();
             long duration = mController.getDurationMs();
 
+            if (duration > 0) {
+                mMiniProgress.setProgress((int) (position * 1000 / duration));
+            }
             if (!mUserSeeking) {
                 if (duration > 0) {
                     mSeekBar.setProgress((int) (position * 1000 / duration));
@@ -208,8 +217,11 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         LiMetrics.applyCarDensity(this);
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_watch);
-        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
+        // further scheduling, otherwise the black overlay still appears after 10 s.
+        getScreensaverManager().disable();
         getScreensaverManager().setBlocked(true);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         bindViews();
 
@@ -241,7 +253,11 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mMetaPane = findViewById(R.id.li_watch_meta);
         mBackButton = findViewById(R.id.li_watch_back);
         mPlayButton = findViewById(R.id.li_watch_play);
+        mNextButton = findViewById(R.id.li_watch_next);
+        mGearButton = findViewById(R.id.li_watch_gear);
         mBuffering = findViewById(R.id.li_watch_buffering);
+        mMiniProgress = findViewById(R.id.li_watch_mini_progress);
+        mPlayerTitle = findViewById(R.id.li_watch_player_title);
         mSeekBar = findViewById(R.id.li_watch_seek);
         mPosition = findViewById(R.id.li_watch_position);
         mDuration = findViewById(R.id.li_watch_duration);
@@ -307,26 +323,18 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
             }
         });
 
+        // Consume the stream here so a tap is handled exactly once. Returning false lets the
+        // View fire its click listener as well, which used to toggle the controls twice.
         mOverlay.setOnTouchListener((v, event) -> {
             mGestureDetector.onTouchEvent(event);
-            return false;
-        });
-        mOverlay.setOnClickListener(v -> {
-            setControlsVisible(!mControlsVisible);
+            return true;
         });
 
         findViewById(R.id.li_watch_like).setOnClickListener(v -> rate(true));
         findViewById(R.id.li_watch_dislike).setOnClickListener(v -> rate(false));
         findViewById(R.id.li_watch_share).setOnClickListener(v -> share());
-        findViewById(R.id.li_watch_quality).setOnClickListener(v -> showQuality());
-        findViewById(R.id.li_watch_speed).setOnClickListener(v -> showSpeed());
-        findViewById(R.id.li_watch_captions).setOnClickListener(v -> showCaptions());
-        View sponsorButton = findViewById(R.id.li_watch_sponsor);
-        sponsorButton.setOnClickListener(v -> toggleSponsorBlock());
-        sponsorButton.setOnLongClickListener(v -> {
-            SponsorBlockSettingsPresenter.instance(this).show(() -> loadSponsorSegments(mVideo));
-            return true;
-        });
+        mNextButton.setOnClickListener(v -> playNext());
+        mGearButton.setOnClickListener(v -> showPlayerSettings());
 
         showControls();
     }
@@ -457,6 +465,9 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
 
     private void bindMetadata(Video video) {
         mTitle.setText(video.getTitle());
+        if (mPlayerTitle != null) {
+            mPlayerTitle.setText(video.getTitle());
+        }
         mAuthor.setText(video.getAuthor());
         mStats.setText(video.getSecondTitle());
 
@@ -631,6 +642,57 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mSponsorAction = null;
     }
 
+    private void showPlayerSettings() {
+        if (mController == null) {
+            return;
+        }
+
+        AppDialogPresenter dialog = AppDialogPresenter.instance(this);
+
+        List<OptionItem> quality = new ArrayList<>();
+        for (FormatItem format : mController.getVideoFormats()) {
+            quality.add(UiOptionItem.from(format, item -> {
+                mController.selectFormat(format);
+                PlayerData.instance(this).setFormat(format);
+            }));
+        }
+        dialog.appendRadioCategory("Quality", quality);
+
+        float[] speeds = {0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f};
+        float currentSpeed = PlayerData.instance(this).getSpeed();
+        List<OptionItem> speedItems = new ArrayList<>();
+        for (float speed : speeds) {
+            String title = speed == 1.0f ? "Normal" : String.format("%sx", speed);
+            speedItems.add(UiOptionItem.from(title, item -> {
+                mController.setSpeed(speed);
+                PlayerData.instance(this).setSpeed(speed);
+            }, Math.abs(currentSpeed - speed) < 0.01f));
+        }
+        dialog.appendRadioCategory("Speed", speedItems);
+
+        List<OptionItem> subtitles = new ArrayList<>();
+        subtitles.add(UiOptionItem.from("Off", item ->
+                mController.selectFormat(FormatItem.SUBTITLE_NONE),
+                mController.getSubtitleFormat() == null));
+        for (FormatItem format : mController.getSubtitleFormats()) {
+            subtitles.add(UiOptionItem.from(format, item -> {
+                mController.selectFormat(format);
+                PlayerData.instance(this).setFormat(format);
+            }));
+        }
+        dialog.appendRadioCategory("Subtitles", subtitles);
+
+        dialog.appendSingleSwitch(UiOptionItem.from("SponsorBlock",
+                item -> {
+                    SponsorBlockData.instance(this).setSponsorBlockEnabled(item.isSelected());
+                    loadSponsorSegments(mVideo);
+                },
+                SponsorBlockData.instance(this).isSponsorBlockEnabled()));
+
+        mKeepPlaying = true;
+        dialog.showDialog("Player");
+    }
+
     private void showQuality() {
         if (mController == null) {
             return;
@@ -701,7 +763,10 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mFullscreen = !mFullscreen;
         mSidePane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
         mMetaPane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
-        mFullscreenButton.setText(mFullscreen ? "Exit" : "Full");
+        mFullscreenButton.setImageResource(mFullscreen
+                ? R.drawable.ic_li_fullscreen_exit
+                : R.drawable.ic_li_fullscreen);
+        mFullscreenButton.setContentDescription(mFullscreen ? "Exit fullscreen" : "Fullscreen");
         showControls();
     }
 
@@ -709,6 +774,9 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mControlsVisible = visible;
         mControls.animate().alpha(visible ? 1f : 0f).setDuration(200).start();
         mBackButton.animate().alpha(visible ? 1f : 0f).setDuration(200).start();
+        if (mPlayerTitle != null) {
+            mPlayerTitle.animate().alpha(visible ? 1f : 0f).setDuration(200).start();
+        }
         mControls.setClickable(visible);
 
         mHandler.removeCallbacks(mHideControls);

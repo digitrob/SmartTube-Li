@@ -130,7 +130,11 @@ public class TouchShortsActivity extends MotherActivity {
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_shorts);
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
+        // further scheduling, otherwise the black overlay still appears after 10 s.
+        getScreensaverManager().disable();
         getScreensaverManager().setBlocked(true);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mShorts = ShortsIntent.takeShorts();
         mIndex = ShortsIntent.takeIndex();
