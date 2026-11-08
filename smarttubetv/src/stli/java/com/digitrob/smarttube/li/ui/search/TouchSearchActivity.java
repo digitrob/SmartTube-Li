@@ -11,7 +11,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -35,7 +35,6 @@ import com.liskovsoft.smartyoutubetv2.tv.R;
  * Touch search: real IME field + 3-column results grid. Results come from {@link SearchPresenter}.
  */
 public class TouchSearchActivity extends MotherActivity implements SearchView {
-    private static final int COLUMNS = 3;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
 
@@ -98,14 +97,8 @@ public class TouchSearchActivity extends MotherActivity implements SearchView {
             }
         });
 
-        GridLayoutManager layoutManager = new GridLayoutManager(this, COLUMNS);
-        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
-            @Override
-            public int getSpanSize(int position) {
-                return mAdapter.getSpanSize(position);
-            }
-        });
-        mRecycler.setLayoutManager(layoutManager);
+        mAdapter.setListMode(true);
+        mRecycler.setLayoutManager(new LinearLayoutManager(this));
         mRecycler.setAdapter(mAdapter);
         mRecycler.setItemAnimator(null);
 

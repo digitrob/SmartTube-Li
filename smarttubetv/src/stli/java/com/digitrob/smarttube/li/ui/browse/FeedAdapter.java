@@ -38,6 +38,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_HEADER = 0;
     private static final int TYPE_VIDEO = 1;
     private static final int TYPE_SHELF = 2;
+    private static final int TYPE_VIDEO_ROW = 3;
 
     private static final int MIN_CARD_WIDTH_DP = 300;
     private static final int MAX_SHORT_COLUMNS = 6;
@@ -82,6 +83,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private int mSpanCount = 3;
     private int mContentWidthPx;
+    private boolean mListMode;
 
     public FeedAdapter(Context context, Listener listener) {
         mContext = context;
@@ -98,6 +100,14 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public void setContentWidth(int widthPx) {
         mContentWidthPx = widthPx;
+    }
+
+    /** Search results use a full-width row instead of the grid card. */
+    public void setListMode(boolean listMode) {
+        if (mListMode != listMode) {
+            mListMode = listMode;
+            notifyDataSetChanged();
+        }
     }
 
     public void clear() {
@@ -183,7 +193,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (row instanceof ShelfRow) {
             return TYPE_SHELF;
         }
-        return TYPE_VIDEO;
+        return mListMode ? TYPE_VIDEO_ROW : TYPE_VIDEO;
     }
 
     public int getSpanSize(int position) {
@@ -200,6 +210,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 return new HeaderHolder(inflater.inflate(R.layout.li_item_header, parent, false));
             case TYPE_SHELF:
                 return new ShelfHolder(inflater.inflate(R.layout.li_item_shorts_shelf, parent, false));
+            case TYPE_VIDEO_ROW:
+                return new VideoHolder(inflater.inflate(R.layout.li_item_video_row, parent, false));
             default:
                 return new VideoHolder(inflater.inflate(R.layout.li_item_video_card, parent, false));
         }

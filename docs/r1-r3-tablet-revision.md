@@ -24,6 +24,10 @@ tablet, without touching upstream logic outside `src/stli`.
 - Video cards (`li_item_video_card.xml`) now follow the YouTube card anatomy:
   thumbnail, duration badge, progress bar, channel avatar circle, two-line title,
   channel/views line, overflow button.
+- Search results use a **full-width list row** (`li_item_video_row.xml`): 320×180 dp thumbnail,
+  two-line title, avatar + channel/views line, duration badge, watched-progress line and
+  overflow. Implemented as `FeedAdapter.setListMode(true)` so search and browse share one
+  adapter and binder.
 - Settings section renders as a **vertical list** (switches, category rows) instead of a grid.
 - Dialogs (`TouchDialogActivity`) are **bottom sheets**: scrim, rounded top corners, drag
   handle, close button, scrollable option list.
@@ -62,6 +66,7 @@ tablet, without touching upstream logic outside `src/stli`.
 | Settings rendered as list | ✅ |
 | Bottom sheet (player gear) | ✅ |
 | Watch: auto-hide, mini progress, title, next/gear | ✅ |
+| Search results as list rows, row opens playback | ✅ |
 | No black overlay after 10–22 s idle | ✅ |
 | No `FATAL EXCEPTION` / no ANR in final cold start | ✅ |
 
@@ -74,9 +79,8 @@ headunit (hardware decoder) before treating them as app regressions.
 
 ## Known gaps
 
-1. Search results are still a 3-column grid, not the approved list layout.
-2. No Home filter chips yet (SmartTube's data layer does not expose YouTube's chip list).
-3. Settings has no dedicated page header/back; the rail stays visible.
-4. Channel/library pages still use the upstream TV activities.
-5. Watch page uses the `ExoPlayerController` subset; upstream's full controller stack
+1. No Home filter chips yet (SmartTube's data layer does not expose YouTube's chip list).
+2. Settings has no dedicated page header/back; the rail stays visible.
+3. Channel/library pages still use the upstream TV activities.
+4. Watch page uses the `ExoPlayerController` subset; upstream's full controller stack
    (storyboard, audio tracks, PiP button parity) is still not ported.
