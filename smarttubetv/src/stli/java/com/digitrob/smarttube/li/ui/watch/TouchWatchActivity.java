@@ -30,8 +30,13 @@ import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemMetadata;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.OptionItem;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.UiOptionItem;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.ExoPlayerController;
+import com.liskovsoft.smartyoutubetv2.common.exoplayer.selector.FormatItem;
+import com.liskovsoft.smartyoutubetv2.common.prefs.PlayerData;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.PlayerView;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.other.ExoPlayerInitializer;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.versions.renderer.CustomOverridesRenderersFactory;
@@ -91,6 +96,7 @@ public class TouchWatchActivity extends MotherActivity {
     private boolean mFullscreen;
     private boolean mControlsVisible = true;
     private boolean mUserSeeking;
+    private boolean mKeepPlaying;
     private GestureDetector mGestureDetector;
 
     private final PlayerView mControllerView = new PlayerView() {
@@ -135,6 +141,14 @@ public class TouchWatchActivity extends MotherActivity {
         public void onVideoLoaded(Video item) {
             if (mBuffering != null) {
                 mBuffering.setVisibility(View.GONE);
+            }
+            if (mController != null) {
+                FormatItem savedFormat = PlayerData.instance(TouchWatchActivity.this)
+                        .getFormat(FormatItem.TYPE_VIDEO);
+                if (savedFormat != null) {
+                    mController.selectFormat(savedFormat);
+                }
+                mController.setSpeed(PlayerData.instance(TouchWatchActivity.this).getSpeed());
             }
             if (mPendingSeekMs > 0 && mController != null) {
                 mController.setPositionMs(mPendingSeekMs);
@@ -187,6 +201,11 @@ public class TouchWatchActivity extends MotherActivity {
         }
 
         mItemService = YouTubeServiceManager.instance().getMediaItemService();
+
+        if (PlayerData.instance(this).getFormat(FormatItem.TYPE_VIDEO) == null) {
+            // Safe default for the headunit: 1080p H.264. Users can change it via Quality.
+            PlayerData.instance(this).setFormat(FormatItem.VIDEO_FHD_AVC_30);
+        }
 
         setupUpNext();
         setupControls();
@@ -280,6 +299,9 @@ public class TouchWatchActivity extends MotherActivity {
         findViewById(R.id.li_watch_like).setOnClickListener(v -> rate(true));
         findViewById(R.id.li_watch_dislike).setOnClickListener(v -> rate(false));
         findViewById(R.id.li_watch_share).setOnClickListener(v -> share());
+        findViewById(R.id.li_watch_quality).setOnClickListener(v -> showQuality());
+        findViewById(R.id.li_watch_speed).setOnClickListener(v -> showSpeed());
+        findViewById(R.id.li_watch_captions).setOnClickListener(v -> showCaptions());
 
         showControls();
     }
@@ -287,12 +309,6 @@ public class TouchWatchActivity extends MotherActivity {
     private void createPlayer() {
         mInitializer = new ExoPlayerInitializer(this);
         DefaultTrackSelector trackSelector = new RestoreTrackSelector(new AdaptiveTrackSelection.Factory());
-        // Cap the initial pick: without the TV track-selection controller the default is the
-        // highest bitrate (often AV1), which software decoders cannot keep up with.
-        trackSelector.setParameters(trackSelector.buildUponParameters()
-                .setMaxVideoSize(1280, 720)
-                .setMaxVideoFrameRate(30)
-                .setMaxVideoBitrate(3_000_000));
 
         mController = new ExoPlayerController(this, mPlayerListener);
         mController.setTrackSelector(trackSelector);
@@ -473,6 +489,72 @@ public class TouchWatchActivity extends MotherActivity {
         }
     }
 
+    private void showQuality() {
+        if (mController == null) {
+            return;
+        }
+
+        List<OptionItem> items = new ArrayList<>();
+        for (FormatItem format : mController.getVideoFormats()) {
+            items.add(UiOptionItem.from(format, item -> {
+                mController.selectFormat(format);
+                PlayerData.instance(this).setFormat(format);
+            }));
+        }
+
+        showSheet("Quality", items);
+    }
+
+    private void showSpeed() {
+        if (mController == null) {
+            return;
+        }
+
+        float[] speeds = {0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f};
+        float current = PlayerData.instance(this).getSpeed();
+        List<OptionItem> items = new ArrayList<>();
+
+        for (float speed : speeds) {
+            String title = speed == 1.0f ? "Normal" : String.format("%sx", speed);
+            items.add(UiOptionItem.from(title,
+                    item -> {
+                        mController.setSpeed(speed);
+                        PlayerData.instance(this).setSpeed(speed);
+                    },
+                    Math.abs(current - speed) < 0.01f));
+        }
+
+        showSheet("Speed", items);
+    }
+
+    private void showCaptions() {
+        if (mController == null) {
+            return;
+        }
+
+        List<OptionItem> items = new ArrayList<>();
+        items.add(UiOptionItem.from("Off", item -> {
+            mController.selectFormat(FormatItem.SUBTITLE_NONE);
+        }, mController.getSubtitleFormat() == null));
+
+        for (FormatItem format : mController.getSubtitleFormats()) {
+            items.add(UiOptionItem.from(format, item -> {
+                mController.selectFormat(format);
+                PlayerData.instance(this).setFormat(format);
+            }));
+        }
+
+        showSheet("Subtitles", items);
+    }
+
+    private void showSheet(String title, List<OptionItem> items) {
+        AppDialogPresenter dialog = AppDialogPresenter.instance(this);
+        dialog.appendRadioCategory(title, items);
+        // The sheet runs in its own translucent activity; keep the video playing behind it.
+        mKeepPlaying = true;
+        dialog.showDialog(title);
+    }
+
     private void toggleFullscreen() {
         mFullscreen = !mFullscreen;
         mSidePane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
@@ -532,6 +614,22 @@ public class TouchWatchActivity extends MotherActivity {
         MessageHelpers.showMessage(this, message != null ? message : "Playback error");
     }
 
+    private void saveHistoryPosition() {
+        if (mVideo == null || mVideo.mediaItem == null || mController == null) {
+            return;
+        }
+
+        final float seconds = mController.getPositionMs() / 1000f;
+        final com.liskovsoft.mediaserviceinterfaces.data.MediaItem item = mVideo.mediaItem;
+
+        Observable.fromCallable(() -> {
+                    mItemService.updateHistoryPosition(item, seconds);
+                    return true;
+                })
+                .subscribeOn(Schedulers.io())
+                .subscribe(ok -> { }, error -> { });
+    }
+
     private void disposeActions() {
         for (Disposable action : mActions) {
             if (action != null && !action.isDisposed()) {
@@ -562,15 +660,17 @@ public class TouchWatchActivity extends MotherActivity {
     protected void onResume() {
         super.onResume();
         LiMetrics.applyCarDensity(this);
+        mKeepPlaying = false;
         mHandler.post(mProgressTick);
         showControls();
     }
 
     @Override
     protected void onPause() {
-        if (mPlayer != null) {
+        if (mPlayer != null && !mKeepPlaying) {
             mPlayer.setPlayWhenReady(false);
         }
+        saveHistoryPosition();
         mHandler.removeCallbacks(mProgressTick);
         mHandler.removeCallbacks(mHideControls);
         super.onPause();

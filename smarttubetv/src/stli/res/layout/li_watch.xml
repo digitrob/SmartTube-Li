@@ -222,6 +222,42 @@
                 android:text="Share"
                 android:textColor="@color/li_text"
                 android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/li_watch_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Quality"
+                android:textColor="@color/li_text"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/li_watch_speed"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="Speed"
+                android:textColor="@color/li_text"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/li_watch_captions"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="CC"
+                android:textColor="@color/li_text"
+                android:textSize="14sp" />
         </LinearLayout>
 
         <TextView
