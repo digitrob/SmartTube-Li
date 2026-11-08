@@ -7,10 +7,15 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import com.digitrob.smarttube.li.LiMetrics;
+import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsGroup;
@@ -22,28 +27,29 @@ import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView;
 import com.liskovsoft.smartyoutubetv2.common.misc.MotherActivity;
 import com.liskovsoft.smartyoutubetv2.tv.R;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * First step of the touch UI: app shell (nav rail + top bar) wired to the real
- * {@link BrowsePresenter}. Content rendering (video grid) lands in M2.
+ * Touch home: nav rail + 3-column feed. Reuses {@link BrowsePresenter} for all data and actions.
  */
 public class TouchBrowseActivity extends MotherActivity implements BrowseView {
-    private final Map<Integer, Integer> mSectionItemCounts = new HashMap<>();
+    private static final int MIN_COLUMNS = 3;
+    private static final int MIN_CARD_WIDTH_DP = 300;
 
     private LinearLayout mRailItems;
     private TextView mHint;
-    private ProgressBar mProgress;
+    private RecyclerView mRecycler;
+    private SwipeRefreshLayout mRefresh;
+    private FeedAdapter mAdapter;
+    private GridLayoutManager mLayoutManager;
     private BrowsePresenter mPresenter;
     private float mDensity = 2.25f;
+    private int mCurrentSectionId = -1;
+    private String mLastScrollEndKey;
     private boolean mProgressShowing;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Upstream normalized density for the TV canvas; switch to the touch canvas before inflating.
         LiMetrics.applyCarDensity(this);
         mDensity = getResources().getDisplayMetrics().density;
         setTheme(R.style.LiTheme);
@@ -51,7 +57,10 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
         mRailItems = findViewById(R.id.li_rail_items);
         mHint = findViewById(R.id.li_content_hint);
-        mProgress = findViewById(R.id.li_progress);
+        mRecycler = findViewById(R.id.li_content);
+        mRefresh = findViewById(R.id.li_refresh);
+
+        setupFeed();
 
         findViewById(R.id.li_search).setOnClickListener(v ->
                 MessageHelpers.showMessage(this, "Search arrives in M3"));
@@ -59,6 +68,91 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         mPresenter = BrowsePresenter.instance(this);
         mPresenter.setView(this);
         mPresenter.onViewInitialized();
+    }
+
+    private void setupFeed() {
+        mAdapter = new FeedAdapter(this, new FeedAdapter.Listener() {
+            @Override
+            public void onVideoClicked(Video video) {
+                mPresenter.onVideoItemClicked(video);
+            }
+
+            @Override
+            public void onVideoLongClicked(Video video) {
+                mPresenter.onVideoItemLongClicked(video);
+            }
+        });
+
+        mLayoutManager = new GridLayoutManager(this, MIN_COLUMNS);
+        mLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                return mAdapter.getSpanSize(position);
+            }
+        });
+
+        mRecycler.setLayoutManager(mLayoutManager);
+        mRecycler.setAdapter(mAdapter);
+        mRecycler.setItemAnimator(null);
+        mRecycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                if (dy > 0) {
+                    maybeLoadMore();
+                }
+            }
+        });
+
+        mRefresh.setOnRefreshListener(() -> {
+            if (mPresenter != null) {
+                mPresenter.refresh();
+            }
+        });
+
+        mRecycler.post(this::updateGridMetrics);
+    }
+
+    private void updateGridMetrics() {
+        if (mRecycler == null) {
+            return;
+        }
+
+        int width = mRecycler.getWidth() - mRecycler.getPaddingStart() - mRecycler.getPaddingEnd();
+        if (width <= 0) {
+            return;
+        }
+
+        mAdapter.setContentWidth(width);
+
+        int columns = Math.max(MIN_COLUMNS, (int) (width / mDensity / MIN_CARD_WIDTH_DP));
+        mAdapter.setSpanCount(columns);
+
+        if (mLayoutManager.getSpanCount() != columns) {
+            mLayoutManager.setSpanCount(columns);
+        }
+    }
+
+    private void maybeLoadMore() {
+        if (mAdapter == null || mPresenter == null) {
+            return;
+        }
+
+        int last = mLayoutManager.findLastVisibleItemPosition();
+        if (last < mAdapter.getItemCount() - 3) {
+            return;
+        }
+
+        Video video = mAdapter.getLastPlainVideo();
+        if (video == null) {
+            return;
+        }
+
+        String key = (video.videoId != null ? video.videoId : video.title) + "#" + video.groupPosition;
+        if (key.equals(mLastScrollEndKey)) {
+            return;
+        }
+        mLastScrollEndKey = key;
+        mPresenter.onScrollEnd(video);
     }
 
     @Override
@@ -69,7 +163,6 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     @Override
     protected void onResume() {
         super.onResume();
-        // MotherActivity re-applies the TV density on resume; restore the touch canvas.
         LiMetrics.applyCarDensity(this);
         if (mPresenter != null) {
             mPresenter.onViewResumed();
@@ -96,6 +189,9 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         LiMetrics.applyCarDensity(this);
+        if (mRecycler != null) {
+            mRecycler.post(this::updateGridMetrics);
+        }
     }
 
     // ----- BrowseView -------------------------------------------------------
@@ -122,8 +218,6 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         mRailItems.addView(item, Math.min(index, mRailItems.getChildCount()), lp);
-
-        updateHint(null);
     }
 
     @Override
@@ -141,8 +235,11 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             }
         }
 
-        mSectionItemCounts.remove(section.getId());
-        updateHint(null);
+        if (section.getId() == mCurrentSectionId) {
+            mCurrentSectionId = -1;
+            mAdapter.clear();
+            showHint(getString(R.string.li_shell_hint));
+        }
     }
 
     @Override
@@ -150,8 +247,11 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         if (mRailItems != null) {
             mRailItems.removeAllViews();
         }
-        mSectionItemCounts.clear();
-        updateHint(null);
+        mCurrentSectionId = -1;
+        if (mAdapter != null) {
+            mAdapter.clear();
+        }
+        showHint(getString(R.string.li_shell_hint));
     }
 
     @Override
@@ -159,59 +259,101 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         if (mRailItems == null) {
             return;
         }
+
         for (int i = 0; i < mRailItems.getChildCount(); i++) {
             mRailItems.getChildAt(i).setSelected(i == index);
+        }
+
+        if (index < 0 || index >= mRailItems.getChildCount()) {
+            return;
+        }
+
+        Object tag = mRailItems.getChildAt(index).getTag();
+        if (tag instanceof Integer) {
+            int sectionId = (int) tag;
+            if (sectionId != mCurrentSectionId) {
+                mCurrentSectionId = sectionId;
+                mLastScrollEndKey = null;
+                mAdapter.clear();
+                showHint("Loading…");
+            }
+            // The TV UI relies on the headers' selection listener for this; touch has to ask.
+            if (mPresenter != null) {
+                mPresenter.onSectionFocused(sectionId);
+            }
         }
     }
 
     @Override
     public void updateSection(VideoGroup group) {
-        if (group == null || group.getSection() == null) {
+        if (group == null || group.getSection() == null || mAdapter == null) {
             return;
         }
-        mSectionItemCounts.put(group.getSection().getId(), group.getVideos().size());
-        updateHint(group.getTitle());
+
+        int sectionId = group.getSection().getId();
+        if (mCurrentSectionId == -1) {
+            mCurrentSectionId = sectionId;
+        }
+
+        if (sectionId != mCurrentSectionId) {
+            return;
+        }
+
+        if (group.getAction() == VideoGroup.ACTION_REPLACE) {
+            mLastScrollEndKey = null;
+        }
+
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            mAdapter.applyGroup(group);
+            updateEmptyState();
+        });
     }
 
     @Override
     public void updateSection(SettingsGroup group) {
-        if (group == null || group.getCategory() == null) {
-            return;
+        if (group != null && group.getCategory() != null && group.getCategory().getId() == mCurrentSectionId) {
+            runOnUiThread(() -> {
+                mAdapter.clear();
+                showHint("Settings sheet arrives in M3");
+            });
         }
-        mSectionItemCounts.put(group.getCategory().getId(), group.getItems().size());
-        updateHint(group.getTitle());
     }
 
     @Override
     public void clearSection(BrowseSection section) {
-        if (section != null) {
-            mSectionItemCounts.remove(section.getId());
+        if (section != null && section.getId() == mCurrentSectionId) {
+            mLastScrollEndKey = null;
+            mAdapter.clear();
+            showHint("Loading…");
         }
-        updateHint(null);
     }
 
     @Override
     public void selectSectionItem(int index) {
-        // M2: scroll the grid to the item.
+        // M2.1: restore scroll position
     }
 
     @Override
     public void selectSectionItem(Video item) {
-        // M2: scroll the grid to the item.
+        // M2.1: restore scroll position
     }
 
     @Override
     public void showError(ErrorFragmentData data) {
-        if (data != null && mHint != null) {
-            mHint.setText(String.format("Error: %s", data.getMessage()));
+        if (data != null) {
+            showHint(String.format("%s\n%s", data.getMessage(),
+                    data.getActionText() != null ? data.getActionText() : ""));
         }
     }
 
     @Override
     public void showProgressBar(boolean show) {
         mProgressShowing = show;
-        if (mProgress != null) {
-            mProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (mRefresh != null) {
+            runOnUiThread(() -> mRefresh.setRefreshing(show));
         }
     }
 
@@ -222,12 +364,14 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     @Override
     public void focusOnContent() {
-        // M2
+        if (mRecycler != null) {
+            mRecycler.scrollToPosition(0);
+        }
     }
 
     @Override
     public boolean isEmpty() {
-        return mRailItems == null || mRailItems.getChildCount() == 0;
+        return mAdapter == null || mAdapter.getItemCount() == 0;
     }
 
     @Override
@@ -237,19 +381,21 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     // ------------------------------------------------------------------------
 
-    private void updateHint(String title) {
-        if (mHint == null) {
-            return;
+    private void updateEmptyState() {
+        if (mAdapter != null && mAdapter.getItemCount() > 0) {
+            if (mHint != null) {
+                mHint.setVisibility(View.GONE);
+            }
+        } else {
+            showHint("Nothing here yet");
         }
+    }
 
-        int sections = mRailItems != null ? mRailItems.getChildCount() : 0;
-        int items = 0;
-        for (Integer count : mSectionItemCounts.values()) {
-            items += count;
+    private void showHint(String text) {
+        if (mHint != null) {
+            mHint.setText(text);
+            mHint.setVisibility(View.VISIBLE);
         }
-
-        String suffix = title != null ? " · " + title : "";
-        mHint.setText(String.format("Touch UI shell · %d sections · %d items%s", sections, items, suffix));
     }
 
     private int dp(int value) {
