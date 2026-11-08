@@ -125,6 +125,7 @@ android {
         variant.outputs.all { output ->
             def project = "SmartTube"
             def flavor = variant.productFlavors[-1].name.substring(2) // remove st prefix
+            if (variant.productFlavors[-1].name == 'stli') flavor = 'li' // stli -> li
             def buildType = variant.buildType.name.take(1)
             def version = variant.versionName
             def arch = output.getFilter(com.android.build.OutputFile.ABI)
@@ -166,6 +167,16 @@ android {
         ststable {
             applicationId "org.smarttube.stable"
             targetSdkVersion project.properties.compileSdkVersion
+        }
+        // Li Auto / car launcher build. Touch-first UI, TV UI kept as fallback.
+        // See docs/upstream-sync.md for the upstream merge policy.
+        stli {
+            applicationId "com.digitrob.smarttube.li"
+            versionNameSuffix "-li.1"
+            targetSdkVersion project.properties.compileSdkVersion
+            // Library modules (common, youtubeapi, ...) only ship stbeta/ststable/stfdroid
+            // flavors. Reuse their stable variants instead of patching submodules.
+            missingDimensionStrategy 'default', 'ststable'
         }
         stfdroid {
             applicationId "app.smarttube.fdroid"

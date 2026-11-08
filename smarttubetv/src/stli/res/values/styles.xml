@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fallback for API < 21 (the headunit is modern; this only keeps minSdk 17 builds valid). -->
+    <style name="LiTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/li_bg</item>
+    </style>
+</resources>

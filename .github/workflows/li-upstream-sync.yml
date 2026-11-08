@@ -1,0 +1,59 @@
+name: Li upstream canary
+
+# Nightly: merge the latest upstream master and try to build our flavor.
+# Nothing is pushed. A red run means "port upstream before the next release".
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Merge upstream master
+        id: merge
+        run: |
+          git config user.name "li-canary"
+          git config user.email "li-canary@users.noreply.github.com"
+          git remote add upstream https://github.com/yuliskov/SmartTube.git
+          git fetch --no-tags upstream master
+          git merge --no-edit upstream/master
+          echo "upstream_sha=$(git rev-parse --short upstream/master)" >> "$GITHUB_OUTPUT"
+
+      - name: Update submodules
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Upstream diff allowlist
+        run: ./scripts/check-upstream-diff.sh upstream/master
+
+      - name: Build Li edition against upstream
+        run: ./gradlew --no-daemon assembleStliDebug
+
+      - name: Upload canary APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: smarttube-li-canary-${{ steps.merge.outputs.upstream_sha }}
+          path: smarttubetv/build/outputs/apk/stli/debug/*.apk
+          if-no-files-found: error

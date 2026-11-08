@@ -1,0 +1,47 @@
+name: Li CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/yuliskov/SmartTube.git
+          git fetch --no-tags upstream master
+
+      - name: Upstream diff allowlist
+        run: ./scripts/check-upstream-diff.sh upstream/master
+
+      - name: Build Li edition
+        run: ./gradlew --no-daemon assembleStliDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: smarttube-li-debug
+          path: smarttubetv/build/outputs/apk/stli/debug/*.apk
+          if-no-files-found: error

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  li build overlay: makes the app installable and usable on a touch-only car headunit
+  while keeping the upstream TV UI available as a fallback.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Not a TV app: touch is the primary input. -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false"
+        tools:replace="android:required" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="true"
+        tools:replace="android:required" />
+    <uses-feature
+        android:name="android.hardware.touchscreen.multitouch"
+        android:required="false" />
+
+    <application
+        android:name="com.digitrob.smarttube.li.LiApplication"
+        tools:replace="android:name">
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivityAlt"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.browse.BrowseActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.channel.ChannelActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.channeluploads.ChannelUploadsActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.playback.PlaybackActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.search.tags.SearchTagsActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.signin.SignInActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.adddevice.AddDeviceActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.webbrowser.WebBrowserActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.dialogs.AppDialogActivity"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.liskovsoft.smartyoutubetv2.tv.ui.dialogs.AppDialogActivityOpaque"
+            android:screenOrientation="sensorLandscape"
+            tools:replace="android:screenOrientation" />
+
+        <activity
+            android:name="com.digitrob.smarttube.li.ui.TouchBrowseActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:theme="@style/LiTheme" />
+
+    </application>
+</manifest>

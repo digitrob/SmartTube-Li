@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="li_bg">#0F0F0F</color>
+    <color name="li_surface">#161616</color>
+    <color name="li_surface_high">#1F1F1F</color>
+    <color name="li_accent">#FF0033</color>
+    <color name="li_text">#FFFFFF</color>
+    <color name="li_text_dim">#9E9E9E</color>
+    <color name="li_selected">#26FFFFFF</color>
+    <color name="li_pressed">#14FFFFFF</color>
+    <color name="li_stroke">#333333</color>
+</resources>

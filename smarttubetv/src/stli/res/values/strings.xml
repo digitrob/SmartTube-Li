@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="li_brand" translatable="false">Li</string>
+    <string name="li_search_hint">Search YouTube</string>
+    <string name="li_profile">Account</string>
+    <string name="li_settings">Settings</string>
+    <string name="li_shell_hint">Touch UI shell · feed arrives in M2</string>
+    <string name="app_name" translatable="false">SmartTube Li</string>
+    <string name="browse_title" translatable="false">SmartTube Li</string>
+</resources>
