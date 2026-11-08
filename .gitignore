@@ -67,6 +67,8 @@ tmp/
 *.7z
 .DS_Store
 /captures
+# Li Edition: device reports may contain serial numbers / VIN-adjacent data
+/docs/device-profiles/
 .externalNativeBuild
 fabric.properties
 *BAK.java
