@@ -8,4 +8,12 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+
+    <style name="LiDialogTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@color/li_scrim</item>
+        <item name="android:colorAccent">@color/li_accent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>

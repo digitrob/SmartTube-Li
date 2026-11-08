@@ -107,9 +107,19 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (group == null || group.getSection() == null) {
             return;
         }
+        applyGroupInternal(group, group.getSection().getId(),
+                group.getTitle() != null ? group.getTitle().toString() : null);
+    }
 
-        int sectionId = group.getSection().getId();
-        String title = group.getTitle() != null ? group.getTitle().toString() : null;
+    /** Search results are a flat list: no section, no group headers. */
+    public void applySearchGroup(VideoGroup group) {
+        if (group == null) {
+            return;
+        }
+        applyGroupInternal(group, -1, null);
+    }
+
+    private void applyGroupInternal(VideoGroup group, int sectionId, String title) {
         int action = group.getAction();
 
         if (action == VideoGroup.ACTION_REPLACE) {
@@ -160,6 +170,9 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     @Override
     public int getItemViewType(int position) {
+        if (position < 0 || position >= mRows.size()) {
+            return TYPE_VIDEO;
+        }
         Object row = mRows.get(position);
         if (row instanceof HeaderRow) {
             return TYPE_HEADER;

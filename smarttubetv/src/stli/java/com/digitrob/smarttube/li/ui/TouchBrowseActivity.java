@@ -16,9 +16,10 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.digitrob.smarttube.li.LiMetrics;
 import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
+import com.digitrob.smarttube.li.ui.browse.SettingsAdapter;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
-import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection;
+import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsGroup;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
@@ -40,6 +41,8 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     private RecyclerView mRecycler;
     private SwipeRefreshLayout mRefresh;
     private FeedAdapter mAdapter;
+    private SettingsAdapter mSettingsAdapter;
+    private boolean mSettingsShown;
     private GridLayoutManager mLayoutManager;
     private BrowsePresenter mPresenter;
     private float mDensity = 2.25f;
@@ -64,7 +67,8 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         setupFeed();
 
         findViewById(R.id.li_search).setOnClickListener(v ->
-                MessageHelpers.showMessage(this, "Search arrives in M3"));
+                com.liskovsoft.smartyoutubetv2.common.app.presenters.SearchPresenter
+                        .instance(this).startSearch(null));
 
         mPresenter = BrowsePresenter.instance(this);
         mPresenter.setView(this);
@@ -89,6 +93,12 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             @Override
             public int getSpanSize(int position) {
                 return mAdapter.getSpanSize(position);
+            }
+        });
+
+        mSettingsAdapter = new SettingsAdapter(item -> {
+            if (item.onClick != null) {
+                item.onClick.run();
             }
         });
 
@@ -275,6 +285,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             if (sectionId != mCurrentSectionId) {
                 mCurrentSectionId = sectionId;
                 mLastScrollEndKey = null;
+                showFeed();
                 mAdapter.clear();
                 showHint("Loading…");
             }
@@ -300,6 +311,8 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             return;
         }
 
+        showFeed();
+
         if (group.getAction() == VideoGroup.ACTION_REPLACE) {
             mLastScrollEndKey = null;
         }
@@ -315,12 +328,23 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     @Override
     public void updateSection(SettingsGroup group) {
-        if (group != null && group.getCategory() != null && group.getCategory().getId() == mCurrentSectionId) {
-            runOnUiThread(() -> {
-                mAdapter.clear();
-                showHint("Settings sheet arrives in M3");
-            });
+        if (group == null || group.getCategory() == null || mSettingsAdapter == null) {
+            return;
         }
+        if (group.getCategory().getId() != mCurrentSectionId) {
+            return;
+        }
+
+        runOnUiThread(() -> {
+            mSettingsAdapter.setItems(group.getItems());
+            if (!mSettingsShown) {
+                mSettingsShown = true;
+                mRecycler.setAdapter(mSettingsAdapter);
+            }
+            if (mHint != null) {
+                mHint.setVisibility(View.GONE);
+            }
+        });
     }
 
     @Override
@@ -381,6 +405,13 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     }
 
     // ------------------------------------------------------------------------
+
+    private void showFeed() {
+        if (mSettingsShown && mRecycler != null) {
+            mSettingsShown = false;
+            mRecycler.setAdapter(mAdapter);
+        }
+    }
 
     private void updateEmptyState() {
         if (mAdapter != null && mAdapter.getItemCount() > 0) {

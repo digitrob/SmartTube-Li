@@ -3,6 +3,8 @@ package com.digitrob.smarttube.li;
 import android.content.Context;
 
 import com.digitrob.smarttube.li.ui.TouchBrowseActivity;
+import com.digitrob.smarttube.li.ui.dialog.TouchDialogActivity;
+import com.digitrob.smarttube.li.ui.search.TouchSearchActivity;
 import com.liskovsoft.smartyoutubetv2.common.app.views.AddDeviceView;
 import com.liskovsoft.smartyoutubetv2.common.app.views.AppDialogView;
 import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView;
@@ -48,8 +50,8 @@ public final class LiUiBinder {
 
         // TV activities stay for now (M2/M3), but they must return to the touch home.
         viewManager.register(PlaybackView.class, PlaybackActivity.class, TouchBrowseActivity.class);
-        viewManager.register(AppDialogView.class, AppDialogActivity.class, TouchBrowseActivity.class);
-        viewManager.register(SearchView.class, SearchTagsActivity.class, TouchBrowseActivity.class);
+        viewManager.register(AppDialogView.class, TouchDialogActivity.class, TouchBrowseActivity.class);
+        viewManager.register(SearchView.class, TouchSearchActivity.class, TouchBrowseActivity.class);
         viewManager.register(SignInView.class, SignInActivity.class, TouchBrowseActivity.class);
         viewManager.register(AddDeviceView.class, AddDeviceActivity.class, TouchBrowseActivity.class);
         viewManager.register(ChannelView.class, ChannelActivity.class, TouchBrowseActivity.class);

@@ -9,4 +9,5 @@
     <color name="li_selected">#26FFFFFF</color>
     <color name="li_pressed">#14FFFFFF</color>
     <color name="li_stroke">#333333</color>
+    <color name="li_scrim">#B3000000</color>
 </resources>
