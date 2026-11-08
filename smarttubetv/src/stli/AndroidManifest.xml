@@ -86,7 +86,7 @@
         <activity
             android:name="com.digitrob.smarttube.li.ui.TouchBrowseActivity"
             android:exported="false"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:screenOrientation="sensorLandscape"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
             android:theme="@style/LiTheme" />

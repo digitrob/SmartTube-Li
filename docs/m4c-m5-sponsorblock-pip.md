@@ -38,14 +38,29 @@ Not implemented:
 Verified: pressing Home while playing shows the system PiP window on the launcher
 (`docs/screenshots/pip-1280dp.jpg`).
 
+## M5b — In-app mini player
+
+- `LiNowPlaying` — tiny process-wide bridge holding the current video, play state and a
+  `Host` (the watch activity) with `onMiniPlayPause` / `onMiniClose`.
+- Pressing **Back** in the watch page no longer stops playback: the watch activity stays alive
+  behind the feed and the feed shows a 64 dp mini player (thumbnail, title, play/pause, close).
+- Tapping the mini player brings the existing watch activity forward (`REORDER_TO_FRONT`);
+  tapping a new card reuses the same player (`onNewIntent`) so there is only ever one player.
+- Closing the mini player finishes the watch activity and releases the player.
+- The feed was changed from `singleTask` to `singleTop`; `singleTask` cleared the stack above
+  it and destroyed the player when reordering.
+
+Verified: back → mini bar; tap → expand; pause → icon/state; new card → single watch instance.
+
+Screenshot: `docs/screenshots/mini-player-1280dp.jpg`.
+
 ## What remains from the original M5 scope
 
-1. **In-app mini player** — a docked player while browsing the feed. This needs a
-   process-wide player/surface owner (the current player lives inside `TouchWatchActivity`),
-   so it is a larger refactor than PiP.
-2. **Shorts pager** — vertical full-screen swipe UI (currently Shorts appear in the feed shelf).
-3. **Comments / chapters panel** on the watch page.
-4. **Queue UI** for the playback queue.
+1. **Shorts pager** — vertical full-screen swipe UI (currently Shorts appear in the feed shelf).
+2. **Comments / chapters panel** on the watch page.
+3. **Queue UI** for the playback queue.
+4. Mini player survives process death only through PiP; a foreground media service would make
+   background audio robust (not required for car use while the app is alive).
 
 ## Next
 

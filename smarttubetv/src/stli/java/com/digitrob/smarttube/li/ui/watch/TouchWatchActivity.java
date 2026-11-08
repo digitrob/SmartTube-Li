@@ -22,8 +22,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.digitrob.smarttube.li.LiMetrics;
+import com.digitrob.smarttube.li.LiNowPlaying;
 import com.digitrob.smarttube.li.ui.playback.SimplePlayerListener;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
+import com.digitrob.smarttube.li.ui.TouchBrowseActivity;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
@@ -65,7 +67,7 @@ import io.reactivex.schedulers.Schedulers;
  * <p>Uses {@link ExoPlayerController} directly, so it does not depend on Leanback. Fullscreen
  * simply hides the side panel and the metadata block.</p>
  */
-public class TouchWatchActivity extends MotherActivity {
+public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.Host {
     private static final long CONTROLS_TIMEOUT_MS = 0; // 0 = keep controls visible (car UX)
     private static final long SEEK_STEP_MS = 10_000;
 
@@ -104,6 +106,7 @@ public class TouchWatchActivity extends MotherActivity {
     private boolean mUserSeeking;
     private boolean mKeepPlaying;
     private boolean mInPip;
+    private boolean mMinimized;
     private List<SponsorSegment> mSponsorSegments;
     private Disposable mSponsorAction;
     private long mLastSkipEndMs = -1;
@@ -125,11 +128,13 @@ public class TouchWatchActivity extends MotherActivity {
         @Override
         public void onPlay() {
             updatePlayButton();
+            LiNowPlaying.instance().update(true);
         }
 
         @Override
         public void onPause() {
             updatePlayButton();
+            LiNowPlaying.instance().update(false);
         }
 
         @Override
@@ -510,6 +515,28 @@ public class TouchWatchActivity extends MotherActivity {
         }
     }
 
+    @Override
+    public void onMiniPlayPause() {
+        togglePlay();
+        LiNowPlaying.instance().update(mController != null && mController.getPlayWhenReady());
+    }
+
+    @Override
+    public void onMiniClose() {
+        mMinimized = false;
+        finish();
+    }
+
+    private void minimize() {
+        mMinimized = true;
+        LiNowPlaying.instance().start(this, mVideo,
+                mController != null && mController.getPlayWhenReady());
+
+        Intent intent = new Intent(this, TouchBrowseActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        startActivity(intent);
+    }
+
     private void loadSponsorSegments(Video video) {
         disposeSponsor();
 
@@ -777,6 +804,8 @@ public class TouchWatchActivity extends MotherActivity {
         super.onResume();
         LiMetrics.applyCarDensity(this);
         mKeepPlaying = false;
+        mMinimized = false;
+        LiNowPlaying.instance().dismiss();
         mHandler.post(mProgressTick);
         if (!mInPip) {
             showControls();
@@ -785,7 +814,7 @@ public class TouchWatchActivity extends MotherActivity {
 
     @Override
     protected void onPause() {
-        if (mPlayer != null && !mKeepPlaying && !mInPip) {
+        if (mPlayer != null && !mKeepPlaying && !mInPip && !mMinimized) {
             mPlayer.setPlayWhenReady(false);
         }
         saveHistoryPosition();
@@ -796,6 +825,7 @@ public class TouchWatchActivity extends MotherActivity {
 
     @Override
     protected void onDestroy() {
+        LiNowPlaying.instance().dismiss();
         disposeActions();
         mHandler.removeCallbacksAndMessages(null);
 
@@ -810,6 +840,26 @@ public class TouchWatchActivity extends MotherActivity {
         mPlayer = null;
 
         super.onDestroy();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+
+        Video video = WatchIntent.take();
+        if (video != null) {
+            loadVideo(video);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mController != null && mController.containsMedia() && mVideo != null) {
+            minimize();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     @Override

@@ -18,7 +18,11 @@ public final class WatchIntent {
 
     public static void start(Activity activity, Video video) {
         sVideo = video;
-        activity.startActivity(new Intent(activity, TouchWatchActivity.class));
+        Intent intent = new Intent(activity, TouchWatchActivity.class);
+        // Reuse the already-running watch activity (e.g. the in-app mini player) so there is
+        // only ever one player instance.
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        activity.startActivity(intent);
     }
 
     public static Video take() {

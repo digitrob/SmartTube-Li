@@ -113,5 +113,53 @@
                 android:textColor="@color/li_text_dim"
                 android:textSize="16sp" />
         </FrameLayout>
+
+        <!-- In-app mini player (video keeps playing in the watch activity behind the feed) -->
+        <LinearLayout
+            android:id="@+id/li_mini_player"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:background="@color/li_surface"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="8dp"
+            android:visibility="gone">
+
+            <com.digitrob.smarttube.li.ui.view.AspectRatioImageView
+                android:id="@+id/li_mini_thumb"
+                android:layout_width="96dp"
+                android:layout_height="54dp"
+                android:scaleType="centerCrop" />
+
+            <TextView
+                android:id="@+id/li_mini_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/li_text"
+                android:textSize="14sp" />
+
+            <ImageButton
+                android:id="@+id/li_mini_play"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_media_pause"
+                android:tint="@color/li_text" />
+
+            <TextView
+                android:id="@+id/li_mini_close"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:gravity="center"
+                android:text="✕"
+                android:textColor="@color/li_text_dim"
+                android:textSize="18sp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

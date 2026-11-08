@@ -1,11 +1,14 @@
 package com.digitrob.smarttube.li.ui;
 
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -15,9 +18,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.digitrob.smarttube.li.LiMetrics;
+import com.digitrob.smarttube.li.LiNowPlaying;
+import com.bumptech.glide.Glide;
 import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
 import com.digitrob.smarttube.li.ui.browse.SettingsAdapter;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
+import com.digitrob.smarttube.li.ui.watch.TouchWatchActivity;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsGroup;
@@ -43,6 +49,11 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     private FeedAdapter mAdapter;
     private SettingsAdapter mSettingsAdapter;
     private boolean mSettingsShown;
+    private View mMiniPlayer;
+    private ImageView mMiniThumb;
+    private TextView mMiniTitle;
+    private ImageButton mMiniPlay;
+    private final LiNowPlaying.Listener mMiniListener = this::updateMiniPlayer;
     private GridLayoutManager mLayoutManager;
     private BrowsePresenter mPresenter;
     private float mDensity = 2.25f;
@@ -121,6 +132,44 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         });
 
         mRecycler.post(this::updateGridMetrics);
+
+        mMiniPlayer = findViewById(R.id.li_mini_player);
+        mMiniThumb = findViewById(R.id.li_mini_thumb);
+        mMiniTitle = findViewById(R.id.li_mini_title);
+        mMiniPlay = findViewById(R.id.li_mini_play);
+        mMiniPlayer.setOnClickListener(v -> openMiniPlayer());
+        mMiniPlay.setOnClickListener(v -> LiNowPlaying.instance().playPause());
+        findViewById(R.id.li_mini_close).setOnClickListener(v -> LiNowPlaying.instance().close());
+        LiNowPlaying.instance().addListener(mMiniListener);
+        updateMiniPlayer();
+    }
+
+    private void openMiniPlayer() {
+        Intent intent = new Intent(this, TouchWatchActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        startActivity(intent);
+    }
+
+    private void updateMiniPlayer() {
+        if (mMiniPlayer == null) {
+            return;
+        }
+
+        LiNowPlaying now = LiNowPlaying.instance();
+        if (!now.isActive() || now.getVideo() == null) {
+            mMiniPlayer.setVisibility(View.GONE);
+            return;
+        }
+
+        mMiniPlayer.setVisibility(View.VISIBLE);
+        mMiniTitle.setText(now.getVideo().getTitle());
+        mMiniPlay.setImageResource(now.isPlaying()
+                ? android.R.drawable.ic_media_pause
+                : android.R.drawable.ic_media_play);
+
+        if (now.getVideo().cardImageUrl != null) {
+            Glide.with(this).load(now.getVideo().cardImageUrl).centerCrop().into(mMiniThumb);
+        }
     }
 
     private void updateGridMetrics() {
@@ -175,6 +224,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
     protected void onResume() {
         super.onResume();
         LiMetrics.applyCarDensity(this);
+        updateMiniPlayer();
         if (mPresenter != null) {
             mPresenter.onViewResumed();
         }
@@ -190,6 +240,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
     @Override
     protected void onDestroy() {
+        LiNowPlaying.instance().removeListener(mMiniListener);
         if (mPresenter != null) {
             mPresenter.onViewDestroyed();
         }
