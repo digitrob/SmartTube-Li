@@ -1,10 +1,13 @@
 package com.digitrob.smarttube.li.ui.watch;
 
+import android.app.PictureInPictureParams;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Rational;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -28,11 +31,14 @@ import com.liskovsoft.mediaserviceinterfaces.MediaItemService;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaGroup;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemMetadata;
+import com.liskovsoft.mediaserviceinterfaces.data.SponsorSegment;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.OptionItem;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.UiOptionItem;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
+import com.liskovsoft.smartyoutubetv2.common.app.presenters.settings.SponsorBlockSettingsPresenter;
+import com.liskovsoft.smartyoutubetv2.common.prefs.SponsorBlockData;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.controller.ExoPlayerController;
 import com.liskovsoft.smartyoutubetv2.common.exoplayer.selector.FormatItem;
@@ -97,6 +103,12 @@ public class TouchWatchActivity extends MotherActivity {
     private boolean mControlsVisible = true;
     private boolean mUserSeeking;
     private boolean mKeepPlaying;
+    private boolean mInPip;
+    private List<SponsorSegment> mSponsorSegments;
+    private Disposable mSponsorAction;
+    private long mLastSkipEndMs = -1;
+    private long mMutedSegmentEndMs = -1;
+    private static final long SKIP_WINDOW_MS = 2_000;
     private GestureDetector mGestureDetector;
 
     private final PlayerView mControllerView = new PlayerView() {
@@ -177,6 +189,7 @@ public class TouchWatchActivity extends MotherActivity {
             }
             mDuration.setText(formatTime(duration));
             mBuffering.setVisibility(mController.isBuffering() ? View.VISIBLE : View.GONE);
+            checkSponsorSegments(position);
 
             mHandler.postDelayed(this, 500);
         }
@@ -302,6 +315,12 @@ public class TouchWatchActivity extends MotherActivity {
         findViewById(R.id.li_watch_quality).setOnClickListener(v -> showQuality());
         findViewById(R.id.li_watch_speed).setOnClickListener(v -> showSpeed());
         findViewById(R.id.li_watch_captions).setOnClickListener(v -> showCaptions());
+        View sponsorButton = findViewById(R.id.li_watch_sponsor);
+        sponsorButton.setOnClickListener(v -> toggleSponsorBlock());
+        sponsorButton.setOnLongClickListener(v -> {
+            SponsorBlockSettingsPresenter.instance(this).show(() -> loadSponsorSegments(mVideo));
+            return true;
+        });
 
         showControls();
     }
@@ -353,6 +372,8 @@ public class TouchWatchActivity extends MotherActivity {
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(this::onMetadata, error -> { }));
+
+        loadSponsorSegments(video);
     }
 
     private void openFormat(MediaItemFormatInfo info) {
@@ -487,6 +508,99 @@ public class TouchWatchActivity extends MotherActivity {
         if (!videos.isEmpty()) {
             loadVideo(videos.get(0));
         }
+    }
+
+    private void loadSponsorSegments(Video video) {
+        disposeSponsor();
+
+        mSponsorSegments = null;
+        mLastSkipEndMs = -1;
+        mMutedSegmentEndMs = -1;
+
+        if (video == null || video.videoId == null || video.isLive) {
+            return;
+        }
+
+        SponsorBlockData data = SponsorBlockData.instance(this);
+        if (!data.isSponsorBlockEnabled() || data.getEnabledCategories().isEmpty()) {
+            return;
+        }
+
+        mSponsorAction = mItemService.getSponsorSegmentsObserve(video.videoId, data.getEnabledCategories())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(segments -> mSponsorSegments = segments, error -> { });
+    }
+
+    private void toggleSponsorBlock() {
+        SponsorBlockData data = SponsorBlockData.instance(this);
+        boolean enabled = !data.isSponsorBlockEnabled();
+        data.setSponsorBlockEnabled(enabled);
+        MessageHelpers.showMessage(this, enabled ? "SponsorBlock on" : "SponsorBlock off");
+        loadSponsorSegments(mVideo);
+    }
+
+    private void checkSponsorSegments(long positionMs) {
+        if (mSponsorSegments == null || mSponsorSegments.isEmpty() || mController == null) {
+            if (mMutedSegmentEndMs > 0) {
+                mController.setVolume(1f);
+                mMutedSegmentEndMs = -1;
+            }
+            return;
+        }
+
+        SponsorBlockData data = SponsorBlockData.instance(this);
+        if (!data.isSponsorBlockEnabled()) {
+            return;
+        }
+
+        if (mMutedSegmentEndMs > 0 && positionMs > mMutedSegmentEndMs) {
+            mController.setVolume(1f);
+            mMutedSegmentEndMs = -1;
+        }
+
+        for (SponsorSegment segment : mSponsorSegments) {
+            boolean inside = positionMs >= segment.getStartMs()
+                    && positionMs <= Math.min(segment.getStartMs() + SKIP_WINDOW_MS, segment.getEndMs());
+
+            if (!inside) {
+                continue;
+            }
+
+            int action = data.getAction(segment.getCategory());
+            if (action == SponsorBlockData.ACTION_DO_NOTHING || action == SponsorBlockData.ACTION_UNDEFINED) {
+                continue;
+            }
+
+            if (SponsorSegment.ACTION_MUTE.equals(segment.getAction())) {
+                if (mMutedSegmentEndMs != segment.getEndMs()) {
+                    mMutedSegmentEndMs = segment.getEndMs();
+                    mController.setVolume(0f);
+                }
+                return;
+            }
+
+            if (mLastSkipEndMs == segment.getEndMs()) {
+                continue;
+            }
+            mLastSkipEndMs = segment.getEndMs();
+
+            if (action != SponsorBlockData.ACTION_SKIP_ONLY) {
+                Integer res = data.getLocalizedRes(segment.getCategory());
+                String label = res != null ? getString(res) : segment.getCategory();
+                MessageHelpers.showMessage(this, "Skipped: " + label);
+            }
+
+            mController.setPositionMs(segment.getEndMs());
+            return;
+        }
+    }
+
+    private void disposeSponsor() {
+        if (mSponsorAction != null && !mSponsorAction.isDisposed()) {
+            mSponsorAction.dispose();
+        }
+        mSponsorAction = null;
     }
 
     private void showQuality() {
@@ -631,6 +745,8 @@ public class TouchWatchActivity extends MotherActivity {
     }
 
     private void disposeActions() {
+        disposeSponsor();
+
         for (Disposable action : mActions) {
             if (action != null && !action.isDisposed()) {
                 action.dispose();
@@ -662,12 +778,14 @@ public class TouchWatchActivity extends MotherActivity {
         LiMetrics.applyCarDensity(this);
         mKeepPlaying = false;
         mHandler.post(mProgressTick);
-        showControls();
+        if (!mInPip) {
+            showControls();
+        }
     }
 
     @Override
     protected void onPause() {
-        if (mPlayer != null && !mKeepPlaying) {
+        if (mPlayer != null && !mKeepPlaying && !mInPip) {
             mPlayer.setPlayWhenReady(false);
         }
         saveHistoryPosition();
@@ -692,6 +810,47 @@ public class TouchWatchActivity extends MotherActivity {
         mPlayer = null;
 
         super.onDestroy();
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        enterPipIfPossible();
+    }
+
+    private void enterPipIfPossible() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || mController == null || !mController.isPlaying()) {
+            return;
+        }
+
+        try {
+            mInPip = true;
+            PictureInPictureParams params = new PictureInPictureParams.Builder()
+                    .setAspectRatio(new Rational(16, 9))
+                    .build();
+            enterPictureInPictureMode(params);
+        } catch (Throwable t) {
+            mInPip = false;
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        mInPip = isInPictureInPictureMode;
+
+        if (isInPictureInPictureMode) {
+            mSidePane.setVisibility(View.GONE);
+            mMetaPane.setVisibility(View.GONE);
+            mControls.setVisibility(View.GONE);
+            mBackButton.setVisibility(View.GONE);
+        } else {
+            mSidePane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
+            mMetaPane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
+            mControls.setVisibility(View.VISIBLE);
+            mBackButton.setVisibility(View.VISIBLE);
+            showControls();
+        }
     }
 
     @Override

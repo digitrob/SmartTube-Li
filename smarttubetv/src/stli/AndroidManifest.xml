@@ -112,6 +112,8 @@
             android:name="com.digitrob.smarttube.li.ui.watch.TouchWatchActivity"
             android:exported="false"
             android:launchMode="singleTop"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
             android:screenOrientation="sensorLandscape"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
             android:theme="@style/LiTheme" />
