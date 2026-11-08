@@ -16,6 +16,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.digitrob.smarttube.li.LiMetrics;
 import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
+import com.digitrob.smarttube.li.ui.playback.WatchIntent;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsGroup;
@@ -74,7 +75,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         mAdapter = new FeedAdapter(this, new FeedAdapter.Listener() {
             @Override
             public void onVideoClicked(Video video) {
-                mPresenter.onVideoItemClicked(video);
+                WatchIntent.start(TouchBrowseActivity.this, video);
             }
 
             @Override

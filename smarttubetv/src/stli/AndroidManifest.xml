@@ -91,5 +91,13 @@
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
             android:theme="@style/LiTheme" />
 
+        <activity
+            android:name="com.digitrob.smarttube.li.ui.watch.TouchWatchActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:theme="@style/LiTheme" />
+
     </application>
 </manifest>
