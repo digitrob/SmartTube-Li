@@ -23,6 +23,7 @@ import com.bumptech.glide.Glide;
 import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
 import com.digitrob.smarttube.li.ui.browse.SettingsAdapter;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
+import com.digitrob.smarttube.li.ui.shorts.ShortsIntent;
 import com.digitrob.smarttube.li.ui.watch.TouchWatchActivity;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.BrowseSection;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.SettingsItem;
@@ -96,6 +97,11 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             @Override
             public void onVideoLongClicked(Video video) {
                 mPresenter.onVideoItemLongClicked(video);
+            }
+
+            @Override
+            public void onShortsClicked(java.util.List<Video> shorts, int index) {
+                ShortsIntent.start(TouchBrowseActivity.this, shorts, index);
             }
         });
 

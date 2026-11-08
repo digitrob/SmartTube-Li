@@ -45,6 +45,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void onVideoClicked(Video video);
 
         void onVideoLongClicked(Video video);
+
+        void onShortsClicked(java.util.List<Video> shorts, int index);
     }
 
     private static final class Group {
@@ -424,7 +426,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             holder.title.setText(video.getTitle());
             loadThumbnail(holder.thumb, video.cardImageUrl, AspectRatioImageView.RATIO_9_16);
 
-            holder.itemView.setOnClickListener(v -> mListener.onVideoClicked(video));
+            holder.itemView.setOnClickListener(v ->
+                    mListener.onShortsClicked(mVideos, holder.getAdapterPosition()));
             holder.itemView.setOnLongClickListener(v -> {
                 mListener.onVideoLongClicked(video);
                 return true;

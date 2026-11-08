@@ -18,6 +18,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.digitrob.smarttube.li.LiMetrics;
 import com.digitrob.smarttube.li.ui.browse.FeedAdapter;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
+import com.digitrob.smarttube.li.ui.shorts.ShortsIntent;
 import com.liskovsoft.sharedutils.helpers.MessageHelpers;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.VideoGroup;
@@ -78,6 +79,11 @@ public class TouchSearchActivity extends MotherActivity implements SearchView {
             @Override
             public void onVideoLongClicked(Video video) {
                 mPresenter.onVideoItemLongClicked(video);
+            }
+
+            @Override
+            public void onShortsClicked(java.util.List<Video> shorts, int index) {
+                ShortsIntent.start(TouchSearchActivity.this, shorts, index);
             }
         });
 

@@ -209,6 +209,7 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_watch);
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getScreensaverManager().setBlocked(true);
 
         bindViews();
 
