@@ -1,5 +1,6 @@
 package com.digitrob.smarttube.li.ui.watch;
 
+import com.digitrob.smarttube.li.ui.LiWindow;
 import android.app.PictureInPictureParams;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -10,10 +11,14 @@ import android.os.Looper;
 import android.util.Rational;
 import android.view.GestureDetector;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -27,10 +32,15 @@ import com.digitrob.smarttube.li.ui.playback.SimplePlayerListener;
 import com.digitrob.smarttube.li.LiPrefs;
 import com.digitrob.smarttube.li.ui.playback.WatchIntent;
 import com.digitrob.smarttube.li.ui.TouchBrowseActivity;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.liskovsoft.mediaserviceinterfaces.CommentsService;
 import com.liskovsoft.mediaserviceinterfaces.MediaItemService;
+import com.liskovsoft.mediaserviceinterfaces.data.CommentGroup;
+import com.liskovsoft.mediaserviceinterfaces.data.CommentItem;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaGroup;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemFormatInfo;
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItemMetadata;
@@ -96,6 +106,17 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
     private TextView mAuthor;
     private TextView mStats;
     private TextView mDescription;
+    private ImageView mAvatar;
+    private ScrollView mScroll;
+    private LinearLayout mCommentsContainer;
+    private View mCommentsSection;
+    private TextView mCommentsMore;
+    private TextView mCommentsEmpty;
+    private ProgressBar mCommentsProgress;
+    private CommentsService mCommentsService;
+    private String mCommentsKey;
+    private String mNextCommentsKey;
+    private boolean mCommentsLoading;
 
     private UpNextAdapter mUpNextAdapter;
 
@@ -218,6 +239,7 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         LiMetrics.applyCarDensity(this);
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_watch);
+        LiWindow.applyImmersive(this);
         // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
         // further scheduling, otherwise the black overlay still appears after 10 s.
         getScreensaverManager().disable();
@@ -233,6 +255,7 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         }
 
         mItemService = YouTubeServiceManager.instance().getMediaItemService();
+        mCommentsService = YouTubeServiceManager.instance().getCommentsService();
 
         if (!LiPrefs.instance(this).isPlayerFormatInitialized()) {
             // Safe default for the headunit: 1080p H.264. Users can change it via the gear
@@ -269,6 +292,13 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mAuthor = findViewById(R.id.li_watch_author);
         mStats = findViewById(R.id.li_watch_stats);
         mDescription = findViewById(R.id.li_watch_description);
+        mAvatar = findViewById(R.id.li_watch_avatar);
+        mScroll = findViewById(R.id.li_watch_scroll);
+        mCommentsSection = findViewById(R.id.li_watch_comments);
+        mCommentsContainer = findViewById(R.id.li_comments_container);
+        mCommentsMore = findViewById(R.id.li_comments_more);
+        mCommentsEmpty = findViewById(R.id.li_comments_empty);
+        mCommentsProgress = findViewById(R.id.li_comments_progress);
     }
 
     private void setupUpNext() {
@@ -338,6 +368,7 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         findViewById(R.id.li_watch_share).setOnClickListener(v -> share());
         mNextButton.setOnClickListener(v -> playNext());
         mGearButton.setOnClickListener(v -> showPlayerSettings());
+        mCommentsMore.setOnClickListener(v -> loadComments(mNextCommentsKey));
 
         showControls();
     }
@@ -372,6 +403,7 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mPendingSeekMs = resumePosition(video);
         bindMetadata(video);
         mUpNextAdapter.setItems(null);
+        resetComments();
         mBuffering.setVisibility(View.VISIBLE);
         mSidePane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
 
@@ -431,6 +463,23 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
 
         if (metadata.getAuthor() != null) {
             mAuthor.setText(metadata.getAuthor());
+        }
+
+        if (metadata.getAuthorImageUrl() != null && !metadata.getAuthorImageUrl().isEmpty()) {
+            Glide.with(this).load(metadata.getAuthorImageUrl())
+                    .apply(RequestOptions.circleCropTransform().placeholder(R.drawable.li_avatar_bg))
+                    .into(mAvatar);
+        }
+
+        String commentsKey = metadata.getCommentsKey();
+        if (commentsKey != null) {
+            if (!commentsKey.equals(mCommentsKey)) {
+                mCommentsKey = commentsKey;
+                loadComments(null);
+            }
+        } else {
+            mCommentsEmpty.setText("Comments are unavailable for this video");
+            mCommentsEmpty.setVisibility(View.VISIBLE);
         }
         if (metadata.getSecondTitle() != null) {
             mStats.setText(metadata.getSecondTitle());
@@ -521,6 +570,118 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         long position = Math.max(0, mController.getPositionMs() + deltaMs);
         mController.setPositionMs(position);
         showControls();
+    }
+
+    private void resetComments() {
+        mCommentsKey = null;
+        mNextCommentsKey = null;
+        mCommentsLoading = false;
+
+        if (mCommentsContainer != null) {
+            mCommentsContainer.removeAllViews();
+        }
+        if (mCommentsProgress != null) {
+            mCommentsProgress.setVisibility(View.GONE);
+        }
+        if (mCommentsMore != null) {
+            mCommentsMore.setVisibility(View.GONE);
+        }
+        if (mCommentsEmpty != null) {
+            mCommentsEmpty.setVisibility(View.GONE);
+        }
+        if (mScroll != null) {
+            mScroll.scrollTo(0, 0);
+        }
+    }
+
+    private void loadComments(String nextKey) {
+        if (mCommentsService == null || mCommentsLoading) {
+            return;
+        }
+
+        String key = nextKey != null ? nextKey : mCommentsKey;
+        if (key == null) {
+            return;
+        }
+
+        mCommentsLoading = true;
+        mCommentsProgress.setVisibility(View.VISIBLE);
+        mCommentsMore.setVisibility(View.GONE);
+        mCommentsEmpty.setVisibility(View.GONE);
+
+        mActions.add(mCommentsService.getCommentsObserve(key)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(this::appendComments, error -> {
+                    mCommentsLoading = false;
+                    mCommentsProgress.setVisibility(View.GONE);
+                    if (mCommentsContainer.getChildCount() == 0) {
+                        mCommentsEmpty.setText("Comments unavailable");
+                        mCommentsEmpty.setVisibility(View.VISIBLE);
+                    }
+                }));
+    }
+
+    private void appendComments(CommentGroup group) {
+        mCommentsLoading = false;
+        mCommentsProgress.setVisibility(View.GONE);
+
+        if (group != null && group.getComments() != null) {
+            for (CommentItem item : group.getComments()) {
+                if (item != null && !item.isEmpty()) {
+                    addCommentRow(item);
+                }
+            }
+        }
+
+        mNextCommentsKey = group != null ? group.getNextCommentsKey() : null;
+        mCommentsMore.setVisibility(mNextCommentsKey != null ? View.VISIBLE : View.GONE);
+
+        if (mCommentsContainer.getChildCount() == 0) {
+            mCommentsEmpty.setText("No comments yet");
+            mCommentsEmpty.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void addCommentRow(CommentItem item) {
+        View row = LayoutInflater.from(this).inflate(R.layout.li_item_comment, mCommentsContainer, false);
+
+        ImageView avatar = row.findViewById(R.id.li_comment_avatar);
+        TextView author = row.findViewById(R.id.li_comment_author);
+        TextView date = row.findViewById(R.id.li_comment_date);
+        TextView message = row.findViewById(R.id.li_comment_message);
+        TextView likes = row.findViewById(R.id.li_comment_likes);
+
+        author.setText(item.getAuthorName());
+        date.setText(item.getPublishedDate());
+        message.setText(item.getMessage());
+
+        String meta = null;
+        if (item.getLikeCount() != null && !item.getLikeCount().isEmpty()) {
+            meta = "\uD83D\uDC4D " + item.getLikeCount();
+        }
+        if (item.getReplyCount() != null && !item.getReplyCount().isEmpty()) {
+            String replies = item.getReplyCount();
+            // Upstream already returns a label like "1 reply" / "12 replies".
+            if (!replies.toLowerCase().contains("repl")) {
+                replies = replies + " replies";
+            }
+            meta = (meta != null ? meta + "   ·   " : "") + replies;
+        }
+        if (meta != null) {
+            likes.setText(meta);
+            likes.setVisibility(View.VISIBLE);
+        } else {
+            likes.setVisibility(View.GONE);
+        }
+
+        if (item.getAuthorPhoto() != null && !item.getAuthorPhoto().isEmpty()) {
+            Glide.with(this).load(item.getAuthorPhoto())
+                    .apply(RequestOptions.circleCropTransform().placeholder(R.drawable.li_avatar_bg))
+                    .into(avatar);
+        }
+
+        mCommentsContainer.addView(row);
     }
 
     private void playNext() {
@@ -766,6 +927,7 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         mFullscreen = !mFullscreen;
         mSidePane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
         mMetaPane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
+        mCommentsSection.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
         mFullscreenButton.setImageResource(mFullscreen
                 ? R.drawable.ic_li_fullscreen_exit
                 : R.drawable.ic_li_fullscreen);

@@ -19,8 +19,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:drawableStart="@drawable/ic_li_youtube"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
             android:text="@string/li_brand"
-            android:textColor="@color/li_accent"
+            android:textColor="@color/li_text"
             android:textSize="20sp"
             android:textStyle="bold" />
 

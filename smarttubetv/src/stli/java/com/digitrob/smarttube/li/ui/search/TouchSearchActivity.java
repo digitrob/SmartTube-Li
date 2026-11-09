@@ -1,5 +1,6 @@
 package com.digitrob.smarttube.li.ui.search;
 
+import com.digitrob.smarttube.li.ui.LiWindow;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
@@ -54,6 +55,7 @@ public class TouchSearchActivity extends MotherActivity implements SearchView {
         mDensity = getResources().getDisplayMetrics().density;
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_search);
+        LiWindow.applyImmersive(this);
         // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
         // further scheduling, otherwise the black overlay still appears after 10 s.
         getScreensaverManager().disable();

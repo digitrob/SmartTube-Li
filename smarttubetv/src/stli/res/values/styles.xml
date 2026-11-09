@@ -3,6 +3,9 @@
     <!-- Fallback for API < 21 (the headunit is modern; this only keeps minSdk 17 builds valid). -->
     <style name="LiTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@color/li_bg</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+        <item name="android:windowActionModeOverlay">true</item>
     </style>
 
     <style name="LiDialogTheme" parent="@android:style/Theme.Black.NoTitleBar">

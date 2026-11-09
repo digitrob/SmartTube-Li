@@ -1,5 +1,6 @@
 package com.digitrob.smarttube.li.ui.dialog;
 
+import com.digitrob.smarttube.li.ui.LiWindow;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -86,6 +87,7 @@ public class TouchDialogActivity extends MotherActivity implements AppDialogView
         mDensity = getResources().getDisplayMetrics().density;
         setTheme(R.style.LiDialogTheme);
         setContentView(R.layout.li_dialog);
+        LiWindow.applyImmersive(this);
 
         // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
         // further scheduling, otherwise the black overlay still appears after 10 s.

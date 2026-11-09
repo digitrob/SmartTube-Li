@@ -44,6 +44,22 @@ tablet, without touching upstream logic outside `src/stli`.
 - Player title is shown in a top gradient and fades with the controls.
 - Icons are vectors from `res/drawable/ic_li_*.xml` (no emoji glyphs, no Material dependency).
 
+## Watch page v2 — description + comments + YouTube brand
+
+- The left column of the watch page is now a `ScrollView`: player (16:9), title, channel row
+  (avatar loaded from `MediaItemMetadata.getAuthorImageUrl()`), actions and the **full**
+  description. Scrolling reveals the **Comments** section below.
+- Comments come from upstream's `CommentsService.getCommentsObserve(metadata.getCommentsKey())`.
+  The first page loads automatically; `nextCommentsKey` powers **Show more comments**.
+  Each row shows the author avatar, name, date, message, like count and reply count.
+  Comment likes/replies reuse the upstream strings as-is ("1 reply", not "1 reply replies").
+- The player is 16:9 of the content column (`AspectRatioFrameLayout`), so the up-next pane stays
+  fixed on the right while the left column scrolls.
+- **Brand:** the rail header now shows the YouTube play mark + "YouTube" wordmark instead of "Li".
+- **Fullscreen:** all touch activities (browse, search, watch, Shorts, dialog) hide the system
+  bars, draw edge-to-edge and force `layoutInDisplayCutoutMode=always`, so the app uses the whole
+  2880×1620 panel. `LiTheme` also carries the fullscreen/cutout attributes.
+
 ## Fixes found during testing
 
 1. **Black screen after ~10 s / input ANR.** `MotherActivity.onCreate` constructs
@@ -72,6 +88,10 @@ tablet, without touching upstream logic outside `src/stli`.
 | Watch: auto-hide, mini progress, title, next/gear | ✅ |
 | Search results as list rows, row opens playback | ✅ |
 | First-run quality = 1080p AVC (gear sheet checkmark) | ✅ |
+| Watch: scroll to full description and comments | ✅ (tablet AVD) |
+| Comment avatars, likes, replies; "Show more" wiring | ✅ |
+| YouTube logo/wordmark top-left | ✅ |
+| Edge-to-edge fullscreen (no status/nav bars) | ✅ |
 | No black overlay after 10–22 s idle | ✅ |
 | No `FATAL EXCEPTION` / no ANR in final cold start | ✅ |
 

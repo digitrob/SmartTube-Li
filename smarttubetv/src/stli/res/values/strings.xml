@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="li_brand" translatable="false">Li</string>
+    <string name="li_brand" translatable="false">YouTube</string>
     <string name="li_search_hint">Search YouTube</string>
     <string name="li_profile">Account</string>
     <string name="li_settings">Settings</string>

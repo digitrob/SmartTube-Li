@@ -73,6 +73,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
         mDensity = getResources().getDisplayMetrics().density;
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_touch_browse);
+        LiWindow.applyImmersive(this);
         // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
         // further scheduling, otherwise the black overlay still appears after 10 s.
         getScreensaverManager().disable();

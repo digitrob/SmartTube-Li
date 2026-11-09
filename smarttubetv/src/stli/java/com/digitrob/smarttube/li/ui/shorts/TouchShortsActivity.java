@@ -1,5 +1,6 @@
 package com.digitrob.smarttube.li.ui.shorts;
 
+import com.digitrob.smarttube.li.ui.LiWindow;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -129,6 +130,7 @@ public class TouchShortsActivity extends MotherActivity {
         LiMetrics.applyCarDensity(this);
         setTheme(R.style.LiTheme);
         setContentView(R.layout.li_shorts);
+        LiWindow.applyImmersive(this);
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // MotherActivity.onCreate already armed a dim timer; cancel it before blocking
         // further scheduling, otherwise the black overlay still appears after 10 s.
