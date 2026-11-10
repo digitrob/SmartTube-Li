@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.digitrob.smarttube.li.ui.view.AspectRatioFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/li_watch_video_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#000000">
+
+    <com.google.android.exoplayer2.ui.PlayerView
+        android:id="@+id/li_watch_player"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000" />
+
+    <ProgressBar
+        android:id="@+id/li_watch_mini_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="bottom"
+        android:max="1000"
+        android:progressBackgroundTint="#33FFFFFF"
+        android:progressTint="@color/li_accent" />
+
+    <FrameLayout
+        android:id="@+id/li_watch_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:background="@drawable/li_player_top_gradient"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="12dp">
+
+            <ImageButton
+                android:id="@+id/li_watch_back"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/li_badge_bg"
+                android:contentDescription="Back"
+                android:src="@drawable/ic_li_arrow_back"
+                android:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/li_watch_player_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/li_watch_buffering"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/li_watch_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@drawable/li_player_gradient"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp">
+
+            <ImageButton
+                android:id="@+id/li_watch_play"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Play"
+                android:src="@android:drawable/ic_media_pause"
+                android:tint="#FFFFFF" />
+
+            <ImageButton
+                android:id="@+id/li_watch_next"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Next"
+                android:src="@android:drawable/ic_media_next"
+                android:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/li_watch_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="0:00"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+
+            <SeekBar
+                android:id="@+id/li_watch_seek"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:max="1000" />
+
+            <TextView
+                android:id="@+id/li_watch_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+
+            <ImageButton
+                android:id="@+id/li_watch_gear"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:src="@drawable/ic_li_settings"
+                android:tint="#FFFFFF" />
+
+            <ImageButton
+                android:id="@+id/li_watch_fullscreen"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Fullscreen"
+                android:src="@drawable/ic_li_fullscreen"
+                android:tint="#FFFFFF" />
+        </LinearLayout>
+    </FrameLayout>
+</com.digitrob.smarttube.li.ui.view.AspectRatioFrameLayout>

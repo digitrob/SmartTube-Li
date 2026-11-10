@@ -66,7 +66,9 @@ public class NavRailController {
         mLogo = activity.findViewById(R.id.li_rail_logo);
         mToggle = activity.findViewById(R.id.li_rail_toggle);
 
-        mCollapsed = LiPrefs.instance(activity).isRailCollapsed();
+        LiPrefs prefs = LiPrefs.instance(activity);
+        boolean narrow = activity.getResources().getConfiguration().screenWidthDp < 900;
+        mCollapsed = prefs.hasRailCollapsedPreference() ? prefs.isRailCollapsed() : narrow;
 
         if (mToggle != null) {
             mToggle.setOnClickListener(v -> setCollapsed(!mCollapsed));
@@ -198,7 +200,14 @@ public class NavRailController {
         mRoot.requestLayout();
 
         if (mLogo != null) {
-            mLogo.setVisibility(mCollapsed ? View.GONE : View.VISIBLE);
+            // Keep the YouTube mark visible when collapsed; only the wordmark is hidden.
+            mLogo.setVisibility(View.VISIBLE);
+            mLogo.setText(mCollapsed ? "" : mContext.getString(R.string.li_brand));
+
+            if (mLogo.getParent() instanceof View) {
+                ((View) mLogo.getParent()).setPaddingRelative(
+                        dp(mCollapsed ? 4 : 16), 0, dp(mCollapsed ? 0 : 8), 0);
+            }
         }
         if (mToggle != null) {
             mToggle.setOnClickListener(toggle);

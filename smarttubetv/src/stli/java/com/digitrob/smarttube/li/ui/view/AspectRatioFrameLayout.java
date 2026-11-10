@@ -10,6 +10,7 @@ import android.widget.FrameLayout;
  */
 public class AspectRatioFrameLayout extends FrameLayout {
     private float mRatio = 16f / 9f;
+    private boolean mMatchHeight;
 
     public AspectRatioFrameLayout(Context context) {
         super(context);
@@ -30,8 +31,21 @@ public class AspectRatioFrameLayout extends FrameLayout {
         }
     }
 
+    /** In fullscreen the container should fill the screen; the player letterboxes the video. */
+    public void setMatchHeight(boolean matchHeight) {
+        if (mMatchHeight != matchHeight) {
+            mMatchHeight = matchHeight;
+            requestLayout();
+        }
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        if (mMatchHeight) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            return;
+        }
+
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = Math.round(width / mRatio);
         super.onMeasure(

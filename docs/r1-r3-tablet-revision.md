@@ -60,6 +60,25 @@ tablet, without touching upstream logic outside `src/stli`.
   bars, draw edge-to-edge and force `layoutInDisplayCutoutMode=always`, so the app uses the whole
   2880×1620 panel. `LiTheme` also carries the fullscreen/cutout attributes.
 
+## Portrait mode
+
+The app now works in both orientations:
+
+- Touch activities and the splash use `android:screenOrientation="sensor"`; orientation changes
+  recreate the screen (the watch page saves/restores the video and playback position through
+  `WatchIntent.last()` and `onSaveInstanceState`).
+- **Rail:** auto-collapses to the 72 dp icon rail when the window is narrower than 900 dp
+  (portrait) until the user explicitly toggles it. The YouTube play mark stays visible in the
+  collapsed header; only the wordmark is hidden.
+- **Feed:** columns are computed from the real content width and a 300 dp minimum, so portrait
+  shows two columns and landscape three (no hard-coded 3).
+- **Watch:** `layout-port/li_watch.xml` stacks the page — 16:9 player, metadata, description,
+  comments, then Up next (420 dp, internally scrollable). Landscape keeps the 2-pane layout.
+  Fullscreen makes the player container fill the screen (letterboxed by the player).
+- **Search:** row thumbnails shrink from 320×180 dp to 180×101 dp in portrait
+  (`values-port/dimens.xml`).
+- Shorts (vertical pager) and the bottom sheet already adapt naturally.
+
 ## Fixes found during testing
 
 1. **Black screen after ~10 s / input ANR.** `MotherActivity.onCreate` constructs
@@ -92,6 +111,8 @@ tablet, without touching upstream logic outside `src/stli`.
 | Comment avatars, likes, replies; "Show more" wiring | ✅ |
 | YouTube logo/wordmark top-left | ✅ |
 | Edge-to-edge fullscreen (no status/nav bars) | ✅ |
+| Portrait browse: compact rail, 2 columns | ✅ (1080×1920 AVD) |
+| Portrait watch: stacked player/meta/comments/up next | built; visual check blocked by emulator stalls |
 | No black overlay after 10–22 s idle | ✅ |
 | No `FATAL EXCEPTION` / no ANR in final cold start | ✅ |
 

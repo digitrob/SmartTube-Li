@@ -43,7 +43,6 @@ import com.liskovsoft.smartyoutubetv2.tv.R;
  * Touch home: nav rail + 3-column feed. Reuses {@link BrowsePresenter} for all data and actions.
  */
 public class TouchBrowseActivity extends MotherActivity implements BrowseView {
-    private static final int MIN_COLUMNS = 3;
     private static final int MIN_CARD_WIDTH_DP = 300;
 
     private NavRailController mRail;
@@ -134,7 +133,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
             }
         });
 
-        mLayoutManager = new GridLayoutManager(this, MIN_COLUMNS);
+        mLayoutManager = new GridLayoutManager(this, 1);
         mLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override
             public int getSpanSize(int position) {
@@ -219,7 +218,7 @@ public class TouchBrowseActivity extends MotherActivity implements BrowseView {
 
         mAdapter.setContentWidth(width);
 
-        int columns = Math.max(MIN_COLUMNS, (int) (width / mDensity / MIN_CARD_WIDTH_DP));
+        int columns = Math.max(1, (int) (width / mDensity / MIN_CARD_WIDTH_DP));
         mAdapter.setSpanCount(columns);
 
         if (mLayoutManager.getSpanCount() != columns) {

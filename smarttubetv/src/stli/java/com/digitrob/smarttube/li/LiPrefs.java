@@ -22,6 +22,7 @@ public final class LiPrefs {
     private static final String FILE = "li_prefs";
     private static final String KEY_TOUCH_UI = "touch_ui";
     private static final String KEY_RAIL_COLLAPSED = "rail_collapsed";
+    private static final String KEY_RAIL_COLLAPSED_SET = "rail_collapsed_set";
     private static final String KEY_PLAYER_FORMAT_INITIALIZED = "player_format_initialized";
 
     private static LiPrefs sInstance;
@@ -66,7 +67,15 @@ public final class LiPrefs {
     }
 
     public void setRailCollapsed(boolean collapsed) {
-        mPrefs.edit().putBoolean(KEY_RAIL_COLLAPSED, collapsed).apply();
+        mPrefs.edit()
+                .putBoolean(KEY_RAIL_COLLAPSED, collapsed)
+                .putBoolean(KEY_RAIL_COLLAPSED_SET, true)
+                .apply();
+    }
+
+    /** True once the user has explicitly toggled the rail. */
+    public boolean hasRailCollapsedPreference() {
+        return mPrefs.getBoolean(KEY_RAIL_COLLAPSED_SET, false);
     }
 
     /**

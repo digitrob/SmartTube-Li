@@ -25,12 +25,12 @@
 
         <activity
             android:name="com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="sensor"
             tools:replace="android:screenOrientation" />
 
         <activity
             android:name="com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivityAlt"
-            android:screenOrientation="sensorLandscape"
+            android:screenOrientation="sensor"
             tools:replace="android:screenOrientation" />
 
         <activity
@@ -87,16 +87,16 @@
             android:name="com.digitrob.smarttube.li.ui.TouchBrowseActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:screenOrientation="sensor"
+            android:configChanges="screenLayout|layoutDirection|uiMode"
             android:theme="@style/LiTheme" />
 
         <activity
             android:name="com.digitrob.smarttube.li.ui.search.TouchSearchActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:screenOrientation="sensor"
+            android:configChanges="screenLayout|layoutDirection|uiMode"
             android:windowSoftInputMode="adjustResize|stateVisible"
             android:theme="@style/LiTheme" />
 
@@ -104,16 +104,16 @@
             android:name="com.digitrob.smarttube.li.ui.dialog.TouchDialogActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:screenOrientation="sensor"
+            android:configChanges="screenLayout|layoutDirection|uiMode"
             android:theme="@style/LiDialogTheme" />
 
         <activity
             android:name="com.digitrob.smarttube.li.ui.shorts.TouchShortsActivity"
             android:exported="false"
             android:launchMode="singleTop"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:screenOrientation="sensor"
+            android:configChanges="screenLayout|layoutDirection|uiMode"
             android:theme="@style/LiTheme" />
 
         <activity
@@ -122,8 +122,8 @@
             android:launchMode="singleTop"
             android:supportsPictureInPicture="true"
             android:resizeableActivity="true"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|layoutDirection|uiMode"
+            android:screenOrientation="sensor"
+            android:configChanges="screenLayout|layoutDirection|uiMode"
             android:theme="@style/LiTheme" />
 
     </application>

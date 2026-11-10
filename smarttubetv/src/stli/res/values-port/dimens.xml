@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="li_row_thumb_width">180dp</dimen>
+    <dimen name="li_row_thumb_height">101dp</dimen>
+</resources>

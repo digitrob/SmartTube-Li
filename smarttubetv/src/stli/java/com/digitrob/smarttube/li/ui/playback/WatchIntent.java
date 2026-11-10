@@ -12,12 +12,14 @@ import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
  */
 public final class WatchIntent {
     private static Video sVideo;
+    private static Video sLastVideo;
 
     private WatchIntent() {
     }
 
     public static void start(Activity activity, Video video) {
         sVideo = video;
+        sLastVideo = video;
         Intent intent = new Intent(activity, TouchWatchActivity.class);
         // Reuse the already-running watch activity (e.g. the in-app mini player) so there is
         // only ever one player instance.
@@ -29,5 +31,10 @@ public final class WatchIntent {
         Video video = sVideo;
         sVideo = null;
         return video;
+    }
+
+    /** Last opened video. Used to rebuild the watch page after an orientation change. */
+    public static Video last() {
+        return sLastVideo;
     }
 }

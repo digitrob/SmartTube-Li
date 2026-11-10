@@ -250,6 +250,11 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
 
         mVideo = WatchIntent.take();
         if (mVideo == null) {
+            // Recreated after an orientation change: the one-shot hand-off is consumed,
+            // but the last video is kept so the player can be restored.
+            mVideo = WatchIntent.last();
+        }
+        if (mVideo == null) {
             finish();
             return;
         }
@@ -268,6 +273,21 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
         setupControls();
         createPlayer();
         loadVideo(mVideo);
+
+        if (savedInstanceState != null) {
+            long position = savedInstanceState.getLong("li_position", -1);
+            if (position > 0) {
+                mPendingSeekMs = position;
+            }
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (mController != null) {
+            outState.putLong("li_position", mController.getPositionMs());
+        }
     }
 
     private void bindViews() {
@@ -925,6 +945,10 @@ public class TouchWatchActivity extends MotherActivity implements LiNowPlaying.H
 
     private void toggleFullscreen() {
         mFullscreen = !mFullscreen;
+        if (mVideoContainer instanceof com.digitrob.smarttube.li.ui.view.AspectRatioFrameLayout) {
+            ((com.digitrob.smarttube.li.ui.view.AspectRatioFrameLayout) mVideoContainer)
+                    .setMatchHeight(mFullscreen);
+        }
         mSidePane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
         mMetaPane.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
         mCommentsSection.setVisibility(mFullscreen ? View.GONE : View.VISIBLE);
